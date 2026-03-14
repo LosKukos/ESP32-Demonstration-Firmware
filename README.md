@@ -8,3 +8,13 @@ Aktuální obsah:
 5. Settings - pomocný modul, zabývá se nastavením konektivity jako je WiFi, Bluetooth, případně MQTT. Umožňuje uživateli výběr sítě a název zařízení
 6. Snake - modul zpracovávající hru Snake, obsahuje 3 obtížnosti - lehká, střední, těžká, při konzumaci ovoce zapojena haptická odezva.
 
+Roadmap
+Aktuální moduly
+  1. Controls.cpp - Modul dokončen a okomentován
+  2. Level.cpp - WIP
+  3. Menu.ino - WIP
+  4. PPG.cpp - WIP
+  5. RGBMENU.cpp - Modul dokončen a okomentován
+  6. Settings.cpp - WIP
+  7. SnakeLib.cpp - WIP
+  8. Web.cpp - WUO

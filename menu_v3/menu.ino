@@ -104,7 +104,6 @@ void setup() {
 }
 
 void loop() {
-  web.loop();
   // MENU 
   if (state == MENU) {
     if (controls.leftPressed) {

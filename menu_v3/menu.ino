@@ -253,37 +253,35 @@ uint32_t Wheel(byte WheelPos) {
 }
 
 void Web_menu() {
-    web.server.on("/", []() {
-        web.server.send_P(200, "text/html", menuPage);
+    web.server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
+        request->send_P(200, "text/html", menuPage);
     });
 
-    web.server.on("/favicon.ico", [](){
-      web.server.send(204); // 204 = No Content
+    web.server.on("/favicon.ico", HTTP_GET, [](AsyncWebServerRequest *request) {
+        request->send(204); // 204 = No Content
     });
 
-    // Endpoint pro aktivaci RGB menu
-    web.server.on("/rgb/activate", []() {
+    web.server.on("/rgb/activate", HTTP_GET, [](AsyncWebServerRequest *request) {
         rgbMenu.begin();  // inicializace RGB menu
         state = RGB;      // přepnutí stavu
-        web.server.send(200, "text/plain", "ok");
+        request->send(200, "text/plain", "ok");
     });
 
-    // Endpoint pro aktivaci RGB menu
-    web.server.on("/snake/activate", []() {
+    web.server.on("/snake/activate", HTTP_GET, [](AsyncWebServerRequest *request) {
         snake.begin();  // inicializace snake
-        state = SNAKE;      // přepnutí stavu
-        web.server.send(200, "text/plain", "ok");
-      });
-
-    web.server.on("/level/activate", []() {
-      level.begin();  // inicializace level
-      state = LEVEL_APP;      // přepnutí stavu
-      web.server.send(200, "text/plain", "ok");
+        state = SNAKE;  // přepnutí stavu
+        request->send(200, "text/plain", "ok");
     });
 
-    web.server.on("/ppg/activate", []() {
-      level.begin();  // inicializace level
-      state = APP_PPG;      // přepnutí stavu
-      web.server.send(200, "text/plain", "ok");
+    web.server.on("/level/activate", HTTP_GET, [](AsyncWebServerRequest *request) {
+        level.begin();   // inicializace level
+        state = LEVEL_APP; // přepnutí stavu
+        request->send(200, "text/plain", "ok");
+    });
+
+    web.server.on("/ppg/activate", HTTP_GET, [](AsyncWebServerRequest *request) {
+        level.begin();   // inicializace level
+        state = APP_PPG; // přepnutí stavu
+        request->send(200, "text/plain", "ok");
     });
 }

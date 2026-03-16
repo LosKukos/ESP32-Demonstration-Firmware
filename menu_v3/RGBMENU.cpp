@@ -117,51 +117,51 @@ bool RGBMenu::shouldExit() { // Indikátor pro opuštění menu
 // Webová stránka pro ovládání RGB menu, umožňuje aktualizaci hodnot sliderů a resetování nebo opuštění menu přes HTTP požadavky
 void RGBMenu::web_RGBMenu() {
 
-    web.server.on("/rgb", [this]() { // Koncový bod pro zobrazení RGB menu
-        web.server.send_P(200, "text/html", rgbPage); // Odeslání HTML stránky pro ovládání RGB menu
+    web.server.on("/rgb", HTTP_GET, [this](AsyncWebServerRequest *request) {
+        request->send_P(200, "text/html", rgbPage);
     });
 
-    web.server.on("/rgb/update", [this]() { // Koncový bod pro aktualizaci hodnot sliderů přes HTTP požadavky
+    web.server.on("/rgb/update", HTTP_GET, [this](AsyncWebServerRequest *request) {
 
-        if (web.server.hasArg("r")) // Kontrola, zda je přítomen argument "r" pro hodnotu červené složky
-            sliderValues[0] = constrain(web.server.arg("r").toInt(),0,255); // Aktualizace hodnoty červené složky s omezením na rozsah 0-255
+        if (request->hasParam("r"))
+            sliderValues[0] = constrain(request->getParam("r")->value().toInt(), 0, 255);
 
-        if (web.server.hasArg("g")) // Kontrola, zda je přítomen argument "g" pro hodnotu zelené složky
-            sliderValues[1] = constrain(web.server.arg("g").toInt(),0,255); // Aktualizace hodnoty zelené složky s omezením na rozsah 0-255
+        if (request->hasParam("g"))
+            sliderValues[1] = constrain(request->getParam("g")->value().toInt(), 0, 255);
 
-        if (web.server.hasArg("b")) // Kontrola, zda je přítomen argument "b" pro hodnotu modré složky
-            sliderValues[2] = constrain(web.server.arg("b").toInt(),0,255); // Aktualizace hodnoty modré složky s omezením na rozsah 0-255
+        if (request->hasParam("b"))
+            sliderValues[2] = constrain(request->getParam("b")->value().toInt(), 0, 255);
 
-        updateLED(); // Aktualizace LED pro zobrazení nové barvy podle aktualizovaných hodnot sliderů
-        drawMenu();  // Aktualizace menu na OLED pro zobrazení nových hodnot sliderů a aktuální barvy RGB
+        updateLED();
+        drawMenu();
 
-        web.server.send(200,"text/plain","ok"); // Odeslání jednoduché odpovědi "ok" pro potvrzení úspěšné aktualizace hodnot sliderů
+        request->send(200, "text/plain", "ok");
     });
 
-    web.server.on("/rgb/reset", [this]() { // Koncový bod pro resetování hodnot sliderů a LED přes HTTP požadavky
+    web.server.on("/rgb/reset", HTTP_GET, [this](AsyncWebServerRequest *request) {
 
-        sliderValues[0] = 0; // Reset hodnoty červené složky na 0
-        sliderValues[1] = 0; // Reset hodnoty zelené složky na 0
-        sliderValues[2] = 0; // Reset hodnoty modré složky na 0
+        sliderValues[0] = 0;
+        sliderValues[1] = 0;
+        sliderValues[2] = 0;
 
-        updateLED(); // Aktualizace LED pro zobrazení nové barvy (v tomto případě vypnutí LED, protože všechny složky jsou nastaveny na 0)
-        drawMenu();  // Aktualizace menu na OLED pro zobrazení resetovaných hodnot sliderů a aktuální barvy RGB (vypnuté)
+        updateLED();
+        drawMenu();
 
-        web.server.send(200,"text/plain","ok"); // Odeslání jednoduché odpovědi "ok" pro potvrzení úspěšného resetování hodnot sliderů a LED
+        request->send(200, "text/plain", "ok");
     });
 
-    web.server.on("/rgb/exit", [this]() { // Koncový bod pro opuštění RGB menu a návrat do hlavního menu přes HTTP požadavky
+    web.server.on("/rgb/exit", HTTP_GET, [this](AsyncWebServerRequest *request) {
 
-        _exit = true; // Nastavení indikátoru pro opuštění menu
+        _exit = true;
 
-        sliderValues[0] = 0; // Reset hodnoty červené složky na 0
-        sliderValues[1] = 0; // Reset hodnoty zelené složky na 0
-        sliderValues[2] = 0; // Reset hodnoty modré složky na 0
+        sliderValues[0] = 0;
+        sliderValues[1] = 0;
+        sliderValues[2] = 0;
 
-        updateLED(); // Aktualizace LED pro zobrazení nové barvy (v tomto případě vypnutí LED, protože všechny složky jsou nastaveny na 0)
-        drawMenu();  // Aktualizace menu na OLED pro zobrazení resetovaných hodnot sliderů a aktuální barvy RGB (vypnuté)
+        updateLED();
+        drawMenu();
 
-        web.server.send(200,"text/plain","ok"); // Odeslání jednoduché odpovědi "ok" pro potvrzení úspěšného nastavení indikátoru pro opuštění menu a resetování hodnot sliderů a LED
+        request->send(200, "text/plain", "ok");
     });
 
 }

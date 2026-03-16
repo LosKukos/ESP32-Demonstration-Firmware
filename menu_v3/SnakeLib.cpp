@@ -139,14 +139,12 @@ void SnakeLib::loop() {
                     _fruitsEaten++; // Zvýšení počtu snězeného ovoce o 1
                     spawnFruit(); // Generování nové pozice ovoce po jeho snězení
 
-                    unsigned long now = millis();
-                    if (BuzzerEndTime == 0) {
                         digitalWrite(controls.BUZZER_PIN, HIGH);
-                        BuzzerEndTime = now + 50;
-                    } else if (now >= BuzzerEndTime) {
+                        BuzzerEndTime = millis() + 50;
+                }
+                if (BuzzerEndTime && millis() >= BuzzerEndTime) {
                         digitalWrite(controls.BUZZER_PIN, LOW);
                         BuzzerEndTime = 0;
-                    }
                 }
                 }
 

@@ -171,51 +171,76 @@ void Web::start() {
             </div>
 
             <script>
+let lastSentR = -1;
+let lastSentG = -1;
+let lastSentB = -1;
+const chunkSize = 10;
 
-            function sendRGB(r,g,b){
-            fetch("/rgb/update?r="+r+"&g="+g+"&b="+b);
-            }
+function sendRGB(r,g,b){
+    fetch("/rgb/update?r="+r+"&g="+g+"&b="+b);
+}
 
-            function updateColorDisplay(send=true){
+function updateColorDisplay(send=true, sendFinal=false){
+    let r = parseInt(document.getElementById("r").value);
+    let g = parseInt(document.getElementById("g").value);
+    let b = parseInt(document.getElementById("b").value);
 
-            let r=document.getElementById("r").value;
-            let g=document.getElementById("g").value;
-            let b=document.getElementById("b").value;
+    // Aktualizace vizuálu
+    document.getElementById("rval").textContent = r;
+    document.getElementById("gval").textContent = g;
+    document.getElementById("bval").textContent = b;
 
-            document.getElementById("rval").textContent=r;
-            document.getElementById("gval").textContent=g;
-            document.getElementById("bval").textContent=b;
+    document.getElementById("colorBox").style.backgroundColor = "rgb("+r+","+g+","+b+")";
 
-            document.getElementById("colorBox").style.backgroundColor="rgb("+r+","+g+","+b+")";
+    document.getElementById("hexVal").textContent =
+        "HEX: #"+r.toString(16).padStart(2,"0")+
+        g.toString(16).padStart(2,"0")+
+        b.toString(16).padStart(2,"0");
 
-            document.getElementById("hexVal").textContent=
-            "HEX: #"+(+r).toString(16).padStart(2,"0")+(+g).toString(16).padStart(2,"0")+(+b).toString(16).padStart(2,"0");
-
-            if(send){
+    if(send){
+        if(sendFinal){
+            // finální hodnota vždy odeslána
+            lastSentR = r;
+            lastSentG = g;
+            lastSentB = b;
             sendRGB(r,g,b);
+        } else {
+            // posílat jen skoky po chunkSize
+            if(Math.floor(r/chunkSize) !== Math.floor(lastSentR/chunkSize) ||
+               Math.floor(g/chunkSize) !== Math.floor(lastSentG/chunkSize) ||
+               Math.floor(b/chunkSize) !== Math.floor(lastSentB/chunkSize)) {
+
+                lastSentR = r;
+                lastSentG = g;
+                lastSentB = b;
+                sendRGB(r,g,b);
             }
-            }
+        }
+    }
+}
 
-            window.onload=function(){
+window.onload = function(){
+    ["r","g","b"].forEach(id => {
+        let el = document.getElementById(id);
+        // během tažení – posílat skoky
+        el.addEventListener("input", function(){updateColorDisplay(true, false);});
+        // při uvolnění – poslat finální hodnotu
+        el.addEventListener("change", function(){updateColorDisplay(true, true);});
+    });
 
-            document.getElementById("r").addEventListener("input",function(){updateColorDisplay(true);});
-            document.getElementById("g").addEventListener("input",function(){updateColorDisplay(true);});
-            document.getElementById("b").addEventListener("input",function(){updateColorDisplay(true);});
+    document.getElementById("resetBtn").addEventListener("click", function(){
+        fetch("/rgb/reset");
+    });
 
-            document.getElementById("resetBtn").addEventListener("click",function(){
-            fetch("/rgb/reset");
-            });
+    document.getElementById("backBtn").addEventListener("click", function(){
+        fetch("/rgb/exit");
+        window.location.href="/";
+    });
 
-            document.getElementById("backBtn").addEventListener("click",function(){
-            fetch("/rgb/exit");
-            window.location.href="/";
-            });
-
-            updateColorDisplay(false);
-
-            };
-
-            </script>
+    // inicializace vizuálu bez odesílání
+    updateColorDisplay(false, false);
+};
+</script>
 
             </body>
             </html>

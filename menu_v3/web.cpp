@@ -6,10 +6,6 @@ void Web::start() {
     server.begin(); // Spuštění webového serveru na portu 80
 }
 
-void Web::loop() {
-    server.handleClient(); // Zpracování příchozích HTTP požadavků
-}
-
 // Webové stránky 
 
     // Menu

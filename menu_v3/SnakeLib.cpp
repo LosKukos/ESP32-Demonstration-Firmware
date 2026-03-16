@@ -138,9 +138,15 @@ void SnakeLib::loop() {
                     _snakeLength++; // Zvýšení délky hada o 1
                     _fruitsEaten++; // Zvýšení počtu snězeného ovoce o 1
                     spawnFruit(); // Generování nové pozice ovoce po jeho snězení
-                    digitalWrite(controls.BUZZER_PIN, HIGH); // Aktivace bzučáku pro haptickou odezvu při snězení ovoce
-                    delay(50); // Krátká prodleva pro zvuk bzučáku
-                    digitalWrite(controls.BUZZER_PIN, LOW); // Deaktivace bzučáku po prodlevě
+
+                    unsigned long now = millis();
+                    if (BuzzerEndTime == 0) {
+                        digitalWrite(controls.BUZZER_PIN, HIGH);
+                        BuzzerEndTime = now + 50;
+                    } else if (now >= BuzzerEndTime) {
+                        digitalWrite(controls.BUZZER_PIN, LOW);
+                        BuzzerEndTime = 0;
+                    }
                 }
                 }
 

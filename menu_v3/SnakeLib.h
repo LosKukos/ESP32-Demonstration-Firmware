@@ -55,6 +55,7 @@ private:
 
     // Časování pohybu hada
     unsigned long _lastMoveTime; // Proměnná pro uložení času posledního pohybu hada
+    unsigned long BuzzerEndTime;
 
     // Pomocné funkce
     void resetGame(); // Reset hry do výchozího stavu

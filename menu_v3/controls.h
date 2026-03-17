@@ -47,7 +47,7 @@ public:
 private:
 
     // --- Definice proměnných ---
-    const unsigned long debounceTime = 200;
+    const unsigned long debounceTime = 250;
     int touch_baseline;
     volatile unsigned long lastLeftTime;
     volatile unsigned long lastRightTime;

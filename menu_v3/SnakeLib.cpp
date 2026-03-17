@@ -315,60 +315,72 @@ void SnakeLib::updateDifficultyLED() { // Aktualizace LED indikace pro zobrazen�
 
 void SnakeLib::web_SnakeLib() { // Registrace HTTP koncových bodů pro Snake hru
 
-    web.server.on("/snake", HTTP_GET, [this](AsyncWebServerRequest *request) {
-        request->send_P(200, "text/html", snakePage);
+    web.server.on("/snake", [this]() { // Koncový bod pro načtení hlavní stránky hry Snake
+        web.server.send_P(200, "text/html", snakePage); // Odeslání HTML stránky pro hru Snake
     });
 
-    web.server.on("/snake/setDifficulty", HTTP_GET, [this](AsyncWebServerRequest *request) {
-        if (request->hasParam("level")) {
-            int level = request->getParam("level")->value().toInt();
-            setDifficulty(level);
+    web.server.on("/snake/setDifficulty", [this]() { // Koncový bod pro nastavení obtížnosti hry Snake přes HTTP požadavky
+        if (web.server.hasArg("level")) { // Kontrola, zda je v HTTP požadavku přítomen argument "level" pro nastavení obtížnosti
+            int level = web.server.arg("level").toInt(); // Převedení hodnoty argumentu "level" na celé číslo pro nastavení obtížnosti
+            setDifficulty(level); // Volání funkce pro nastavení obtížnosti hry Snake podle zadané hodnoty argumentu "level"
         }
-        request->send(200, "text/plain", "Difficulty set");
+        web.server.send(200, "text/plain", "Difficulty set"); // Odeslání odpovědi pro potvrzení nastavení obtížnosti
     });
 
-    web.server.on("/snake/setName", HTTP_GET, [this](AsyncWebServerRequest *request) {
-        if (request->hasParam("name")) {
-            String name = request->getParam("name")->value();
+    web.server.on("/snake/setName", [this]() { // Koncový bod pro nastavení jména hráče pro záznam
+        if (web.server.hasArg("name")) { // Kontrola, zda je v HTTP požadavku přítomen argument "name" pro nastavení jména hráče
+            String name = web.server.arg("name"); // Uložení zadaného jména hráče
 
-            LeaderboardEntry entry;
-            entry.name = name.length() ? name : "---";
-            entry.score = _fruitsEaten;
-            entry.difficulty = _difficultyLevels[_difficultyIndex];
-            leaderboard.push_back(entry);
+            LeaderboardEntry entry; // Vytvoření záznamu pro leaderboard
+            entry.name = name.length() ? name : "---"; // Nastavení jména hráče pro záznam, pokud není zadáno, použije se "---"
+            entry.score = _fruitsEaten; // Nastavení skóre pro záznam podle počtu snězeného ovoce
+            entry.difficulty = _difficultyLevels[_difficultyIndex]; // Nastavení obtížnosti pro záznam podle aktuální zvolené obtížnosti
+            leaderboard.push_back(entry); // Přidání záznamu do tabulky pro pozdější zobrazení na webu
         }
-        request->send(200, "text/plain", "OK");
+        web.server.send(200, "text/plain", "OK"); // Odeslání odpovědi pro potvrzení nastavení jména hráče
     });
 
-    web.server.on("/snake/leaderboard", HTTP_GET, [this](AsyncWebServerRequest *request) {
-        std::sort(leaderboard.begin(), leaderboard.end(),
-            [](const LeaderboardEntry &a, const LeaderboardEntry &b) {
-                int multiplierA = (a.difficulty == "Lehka") ? 1 :
-                                  (a.difficulty == "Stredni") ? 2 :
-                                  (a.difficulty == "Tezka") ? 3 :
-                                  (a.difficulty == "Chaos") ? 5 : 0;
-                int multiplierB = (b.difficulty == "Lehka") ? 1 :
-                                  (b.difficulty == "Stredni") ? 2 :
-                                  (b.difficulty == "Tezka") ? 3 :
-                                  (b.difficulty == "Chaos") ? 5 : 0;
-                return (a.score * multiplierA) > (b.score * multiplierB);
-            });
+    web.server.on("/snake/leaderboard", [this]() { // Koncový bod pro načtení tabulky s výsledky hráčů pro zobrazení na webu
+    std::sort(leaderboard.begin(), leaderboard.end(), // Seřazení záznamů v tabulce podle skóre a obtížnosti pro zobrazení na webu
+      [](const LeaderboardEntry &a, const LeaderboardEntry &b) { // Lambda funkce pro porovnání záznamů v tabulce pro seřazení
+          int multiplierA = (a.difficulty == "Lehka") ? 1 : // Nastavení násobitele 1x pro lehkou obtížnost
+                            (a.difficulty == "Stredni") ? 2 : // Nastavení násobitele 2x pro střední obtížnost
+                            (a.difficulty == "Tezka") ? 3 : // Nastavení násobitele 3x pro těžkou obtížnost
+                            (a.difficulty == "Chaos") ? 5 : 0; // Nastavení násobitele 5x pro chaotickou obtížnost, jinak 0 pro neznámou obtížnost
 
-        String json = "[";
-        for (size_t i = 0; i < leaderboard.size(); i++) {
-            json += "{";
-            json += "\"name\":\"" + leaderboard[i].name + "\",";
-            json += "\"score\":" + String(leaderboard[i].score) + ",";
-            json += "\"difficulty\":\"" + leaderboard[i].difficulty + "\"";
-            json += "}";
-            if(i < leaderboard.size() - 1) json += ",";
-        }
-        json += "]";
-        request->send(200, "application/json", json);
+          int multiplierB = (b.difficulty == "Lehka") ? 1 : // Nastavení násobitele 1x pro lehkou obtížnost
+                            (b.difficulty == "Stredni") ? 2 : // Nastavení násobitele 2x pro střední obtížnost
+                            (b.difficulty == "Tezka") ? 3 : // Nastavení násobitele 3x pro těžkou obtížnost
+                            (b.difficulty == "Chaos") ? 5 : 0; // Nastavení násobitele 5x pro chaotickou obtížnost, jinak 0 pro neznámou obtížnost
+
+          return (a.score * multiplierA) > (b.score * multiplierB); // Porovnání záznamů podle skóre vynásobeného násobitelem pro seřazení v sestupném pořadí
+
     });
 
-    web.server.on("/snake/exit", HTTP_GET, [this](AsyncWebServerRequest *request) {
-        _exit = true;
-        request->send(200, "text/plain", "ok");
+    String json = "["; // Vytvoření JSON pole pro záznamy v tabulce pro odeslání na web
+    for (size_t i = 0; i < leaderboard.size(); i++) { // Smyčka pro vytvoření JSON objektů pro jednotlivé záznamy v tabulce pro odeslání na web
+        json += "{"; // Otevření JSON objektu pro záznam
+        json += "\"name\":\"" + leaderboard[i].name + "\",";  // Přidání jména hráče do JSON objektu pro záznam
+        json += "\"score\":" + String(leaderboard[i].score) + ","; // Přidání skóre hráče do JSON objektu pro záznam
+        json += "\"difficulty\":\"" + leaderboard[i].difficulty + "\""; // Přidání obtížnosti hráče do JSON objektu pro záznam
+        json += "}"; // Uzavření JSON objektu pro záznam
+        if (i < leaderboard.size() - 1) json += ","; // Přidání čárky mezi záznamy v JSON poli, pokud nejde o poslední záznam
+    }
+    json += "]"; // Uzavření JSON pole pro záznamy v tabulce pro odeslání na web
+    web.server.send(200, "application/json", json); // Odeslání JSON pole s výsledky hráčů pro zobrazení na webu
     });
+
+    web.server.on("/snake/exit", [this]() { // Koncový bod pro opuštění Snake a návrat do hlavního menu přes HTTP požadavky
+        _exit = true; // Nastavení indikátoru pro opuštění menu
+        web.server.send(200,"text/plain","ok"); // Odeslání odpovědi pro potvrzení opuštění menu a návratu do hlavního menu
+    });
+}
+
+void SnakeLib::setDifficulty(int level){ // Funkce pro nastavení obtížnosti hry Snake podle zadané hodnoty argumentu "level" z HTTP požadavku
+    if(level < 0 || level > 3) return; // Ověření, že zadaná hodnota pro obtížnost je v platném rozsahu (0-3)
+
+    _difficultyIndex = level; // Nastavení indexu zvolené obtížnosti podle zadané hodnoty argumentu "level"
+    _gameSpeed = _difficultySpeeds[_difficultyIndex]; // Aktualizace rychlosti hry podle zvolené obtížnosti
+
+    updateDifficultyLED(); // Aktualizace LED indikace pro zobrazení zvolené obtížnosti po změně obtížnosti
 }

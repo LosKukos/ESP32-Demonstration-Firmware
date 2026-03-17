@@ -16,6 +16,8 @@ String menuItems[menuLength] = { "PPG", "Gyroskop", "Had", "Ovladani LED", "Nast
 int selected = 0;
 unsigned long lastRainbowTime = 0;
 int rainbowPos = 0;
+unsigned long lastLoopTime = 0;
+const unsigned long loopInterval = 50; // Interval pro hlavní loop (50ms)
 
 int firstVisible = 0;             // index první viditelné položky
 const int itemHeight = 12;        // výška jedné položky
@@ -104,6 +106,13 @@ void setup() {
 }
 
 void loop() {
+  web.loop();
+
+  unsigned long now = millis();
+
+  if (now - lastLoopTime >= loopInterval) {
+    lastLoopTime = now;
+    
   // MENU 
   if (state == MENU) {
     if (controls.leftPressed) {
@@ -143,8 +152,7 @@ void loop() {
   switch (state) {
     case MENU:
       {
-        // Rainbow efekt
-        unsigned long now = millis();
+        // Rainbow efekt v menu
 
         if (now - lastRainbowTime >= 50) {
           lastRainbowTime = now;
@@ -194,7 +202,6 @@ void loop() {
       if (ppg.shouldExit()) {
         state = MENU;
         drawMenu();
-        delay(50);  // malá prodleva (stabilizace touch)
       }
       break;
 
@@ -203,7 +210,6 @@ void loop() {
       if (level.shouldExit()) {
         state = MENU;
         drawMenu();
-        delay(50);  // malá prodleva (stabilizace touch)
       }
       break;
 
@@ -212,7 +218,6 @@ void loop() {
       if (snake.shouldExit()) {
         state = MENU;
         drawMenu();
-        delay(50);  // malá prodleva (stabilizace touch)
       }
       break;
 
@@ -221,7 +226,6 @@ void loop() {
       if (rgbMenu.shouldExit()) {
         state = MENU;
         drawMenu();
-        delay(50);
       }
       break;
 
@@ -230,12 +234,11 @@ void loop() {
       if (settings.shouldExit()){
         state = MENU;
         drawMenu();
-        delay(50);
       }
       break;
 
   }
-  delay(50);
+  }
 }
 
 uint32_t Wheel(byte WheelPos) {
@@ -252,35 +255,37 @@ uint32_t Wheel(byte WheelPos) {
 }
 
 void Web_menu() {
-    web.server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
-        request->send_P(200, "text/html", menuPage);
+    web.server.on("/", []() {
+        web.server.send_P(200, "text/html", menuPage);
     });
 
-    web.server.on("/favicon.ico", HTTP_GET, [](AsyncWebServerRequest *request) {
-        request->send(204); // 204 = No Content
+    web.server.on("/favicon.ico", [](){
+      web.server.send(204); // 204 = No Content
     });
 
-    web.server.on("/rgb/activate", HTTP_GET, [](AsyncWebServerRequest *request) {
+    // Endpoint pro aktivaci RGB menu
+    web.server.on("/rgb/activate", []() {
         rgbMenu.begin();  // inicializace RGB menu
         state = RGB;      // přepnutí stavu
-        request->send(200, "text/plain", "ok");
+        web.server.send(200, "text/plain", "ok");
     });
 
-    web.server.on("/snake/activate", HTTP_GET, [](AsyncWebServerRequest *request) {
+    // Endpoint pro aktivaci RGB menu
+    web.server.on("/snake/activate", []() {
         snake.begin();  // inicializace snake
-        state = SNAKE;  // přepnutí stavu
-        request->send(200, "text/plain", "ok");
+        state = SNAKE;      // přepnutí stavu
+        web.server.send(200, "text/plain", "ok");
+      });
+
+    web.server.on("/level/activate", []() {
+      level.begin();  // inicializace level
+      state = LEVEL_APP;      // přepnutí stavu
+      web.server.send(200, "text/plain", "ok");
     });
 
-    web.server.on("/level/activate", HTTP_GET, [](AsyncWebServerRequest *request) {
-        level.begin();   // inicializace level
-        state = LEVEL_APP; // přepnutí stavu
-        request->send(200, "text/plain", "ok");
-    });
-
-    web.server.on("/ppg/activate", HTTP_GET, [](AsyncWebServerRequest *request) {
-        level.begin();   // inicializace level
-        state = APP_PPG; // přepnutí stavu
-        request->send(200, "text/plain", "ok");
+    web.server.on("/ppg/activate", []() {
+      level.begin();  // inicializace level
+      state = APP_PPG;      // přepnutí stavu
+      web.server.send(200, "text/plain", "ok");
     });
 }

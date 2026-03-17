@@ -187,8 +187,8 @@ bool Level::shouldExit() {
 }
 
 void Level::web_Level() {
-    web.server.on("/level/exit", HTTP_GET, [this](AsyncWebServerRequest *request) {
-        _exit = true;
-        request->send(200, "text/plain", "ok");
+    web.server.on("/level/exit", [this]() { // Koncový bod pro opuštění Level a návrat do hlavního menu přes HTTP požadavky
+        _exit = true; // Nastavení indikátoru pro opuštění menu
+        web.server.send(200,"text/plain","ok"); // Odeslání odpovědi pro potvrzení opuštění menu a návratu do hlavního menu
     });
 }

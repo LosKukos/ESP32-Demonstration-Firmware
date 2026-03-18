@@ -6,7 +6,6 @@
 #include <Adafruit_GFX.h>
 #include <Adafruit_SH110X.h>
 #include <Adafruit_NeoPixel.h>
-#include <WebServer.h>
 
 // --- Rozlišení OLED displeje ---
 #define SCREEN_WIDTH 128

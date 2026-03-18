@@ -21,5 +21,7 @@ extern Web web;
 extern const char menuPage[];
 extern const char rgbPage[];
 extern const char snakePage[];
+extern const char levelPage[];
+extern const char ppgPage[];
 
 #endif

@@ -74,9 +74,9 @@ void setup() {
   settings.start(); // Inicializace nastavení
 
   // Registrace webů
-  //rgbMenu.web_RGBMenu();
-  //snake.web_SnakeLib(); 
-  //level.web_Level();
+  rgbMenu.web_RGBMenu();
+  snake.web_SnakeLib();
+  level.web_Level();
   Web_menu();
   
   web.server.onNotFound([](AsyncWebServerRequest *request) {
@@ -96,7 +96,6 @@ void setup() {
 
   drawMenu();
 
-  settings.debug();
 }
 
 void loop() {
@@ -104,8 +103,6 @@ void loop() {
 
   if (now - lastLoopTime >= loopInterval){  
     lastLoopTime = now;
-    settings.debug();
-
     // MENU 
     if (state == MENU) {
       if (controls.leftPressed) {
@@ -256,22 +253,44 @@ void Web_menu() {
     });
 
     web.server.on("/rgb/activate", HTTP_GET, [](AsyncWebServerRequest *request) {
-        selected = 3;      // přepnutí stavu
+        state = RGB;
+        selected = 3;
+        rgbMenu.begin();
         request->send(200, "text/plain", "ok");
     });
 
     web.server.on("/snake/activate", HTTP_GET, [](AsyncWebServerRequest *request) {
-        selected = 2;  // přepnutí stavu
+        state = SNAKE;
+        selected = 2;
+        snake.begin();
         request->send(200, "text/plain", "ok");
     });
 
     web.server.on("/level/activate", HTTP_GET, [](AsyncWebServerRequest *request) {
-        selected = 1; // přepnutí stavu
+        state = LEVEL_APP;
+        selected = 1;
+        level.begin();
         request->send(200, "text/plain", "ok");
     });
 
     web.server.on("/ppg/activate", HTTP_GET, [](AsyncWebServerRequest *request) {
-        selected = 0; // přepnutí stavu
+        state = APP_PPG;
+        selected = 0;
+        ppg.begin();
+        request->send(200, "text/plain", "ok");
+    });
+
+    web.server.on("/level", HTTP_GET, [](AsyncWebServerRequest *request) {
+        request->send_P(200, "text/html", levelPage);
+    });
+
+    web.server.on("/ppg", HTTP_GET, [](AsyncWebServerRequest *request) {
+        request->send_P(200, "text/html", ppgPage);
+    });
+
+    web.server.on("/ppg/exit", HTTP_GET, [](AsyncWebServerRequest *request) {
+        state = MENU;
+        drawMenu();
         request->send(200, "text/plain", "ok");
     });
 }

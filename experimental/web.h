@@ -1,17 +1,18 @@
+#include <AsyncTCP.h>
+
+#include <ESPAsyncWebServer.h>
+
 #ifndef WEB_H
 #define WEB_H
 
 #pragma once
-
-#include <WebServer.h>
 
 class Web {
     public:
         Web() = default;
 
         void start();       // Inicializace webového serveru
-        void loop();        // Zpracování příchozích HTTP požadavků
-        WebServer server{80}; // Vytvoření instance webového serveru na portu 80
+        AsyncWebServer server{80};
 
 };
 

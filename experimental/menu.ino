@@ -87,10 +87,10 @@ void setup() {
   Web_menu();
   
 
-  web.server.onNotFound([]() {
+  web.server.onNotFound([](AsyncWebServerRequest *request) {
       Serial.print("Stránka nebyla nalezena: ");
-      Serial.println(web.server.uri());
-      web.server.send(404, "text/plain", "Stránka nebyla nalezena");
+      Serial.println(request->url());
+      request->send(404, "text/plain", "Stránka nebyla nalezena");
     });
 
   web.start(); // Spuštění webového serveru
@@ -257,12 +257,12 @@ uint32_t Wheel(byte WheelPos) {
 }
 
 void Web_menu() {
-    web.server.on("/", []() {
-        web.server.send_P(200, "text/html", menuPage);
+    web.server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
+        request->send_P(200, "text/html", menuPage);
     });
 
-    web.server.on("/favicon.ico", [](){
-      web.server.send(204); // 204 = No Content
+    web.server.on("/favicon.ico", HTTP_GET, [](AsyncWebServerRequest *request){
+      request->send(204); // 204 = No Content
     });
 
     web.server.on("/rgb/activate", HTTP_GET, [](AsyncWebServerRequest *request) {

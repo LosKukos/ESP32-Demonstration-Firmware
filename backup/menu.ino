@@ -82,7 +82,7 @@ void setup() {
 
   // Registrace webů
   rgbMenu.web_RGBMenu();
-  snake.web_SnakeLib();
+  snake.web_SnakeLib(); 
   level.web_Level();
   Web_menu();
   
@@ -103,7 +103,6 @@ void setup() {
   display.display();
 
   drawMenu();
-
 }
 
 void loop() {
@@ -111,22 +110,19 @@ void loop() {
 
   if (now - lastLoopTime >= loopInterval) {
     lastLoopTime = now;
-    // MENU 
-    if (state == MENU) {
-      if (controls.leftPressed) {
-        selected = (selected - 1 + menuLength) % menuLength;
+    
+  // MENU 
+  if (state == MENU) {
+    if (controls.leftPressed) {
+      selected = (selected - 1 + menuLength) % menuLength;
 
-        // pokud vyjedeš nahoru mimo viditelné okno
-        if (selected < firstVisible) {
-          firstVisible = selected;
-        }
-        // pokud se „wrap“ na poslední položku, posuň viewport dolů
-        if (selected == menuLength - 1) {
-          firstVisible = max(menuLength - visibleItems, 0);
-        }
-
-        controls.leftPressed = false;
-        drawMenu();
+      // pokud vyjedeš nahoru mimo viditelné okno
+      if (selected < firstVisible) {
+        firstVisible = selected;
+      }
+      // pokud se „wrap“ na poslední položku, posuň viewport dolů
+      if (selected == menuLength - 1) {
+        firstVisible = max(menuLength - visibleItems, 0);
       }
 
       controls.leftPressed = false;
@@ -265,45 +261,29 @@ void Web_menu() {
       web.server.send(204); // 204 = No Content
     });
 
-    web.server.on("/rgb/activate", HTTP_GET, [](AsyncWebServerRequest *request) {
-        state = RGB;
-        selected = 3;
-        rgbMenu.begin();
-        request->send(200, "text/plain", "ok");
+    // Endpoint pro aktivaci RGB menu
+    web.server.on("/rgb/activate", []() {
+        rgbMenu.begin();  // inicializace RGB menu
+        state = RGB;      // přepnutí stavu
+        web.server.send(200, "text/plain", "ok");
     });
 
-    web.server.on("/snake/activate", HTTP_GET, [](AsyncWebServerRequest *request) {
-        state = SNAKE;
-        selected = 2;
-        snake.begin();
-        request->send(200, "text/plain", "ok");
+    // Endpoint pro aktivaci RGB menu
+    web.server.on("/snake/activate", []() {
+        snake.begin();  // inicializace snake
+        state = SNAKE;      // přepnutí stavu
+        web.server.send(200, "text/plain", "ok");
+      });
+
+    web.server.on("/level/activate", []() {
+      level.begin();  // inicializace level
+      state = LEVEL_APP;      // přepnutí stavu
+      web.server.send(200, "text/plain", "ok");
     });
 
-    web.server.on("/level/activate", HTTP_GET, [](AsyncWebServerRequest *request) {
-        state = LEVEL_APP;
-        selected = 1;
-        level.begin();
-        request->send(200, "text/plain", "ok");
-    });
-
-    web.server.on("/ppg/activate", HTTP_GET, [](AsyncWebServerRequest *request) {
-        state = APP_PPG;
-        selected = 0;
-        ppg.begin();
-        request->send(200, "text/plain", "ok");
-    });
-
-    web.server.on("/level", HTTP_GET, [](AsyncWebServerRequest *request) {
-        request->send_P(200, "text/html", levelPage);
-    });
-
-    web.server.on("/ppg", HTTP_GET, [](AsyncWebServerRequest *request) {
-        request->send_P(200, "text/html", ppgPage);
-    });
-
-    web.server.on("/ppg/exit", HTTP_GET, [](AsyncWebServerRequest *request) {
-        state = MENU;
-        drawMenu();
-        request->send(200, "text/plain", "ok");
+    web.server.on("/ppg/activate", []() {
+      level.begin();  // inicializace level
+      state = APP_PPG;      // přepnutí stavu
+      web.server.send(200, "text/plain", "ok");
     });
 }

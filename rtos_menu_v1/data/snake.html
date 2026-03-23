@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Snake Leaderboard</title>
+
+<link rel="stylesheet" type="text/css" href="/style-snake.css">
+</head>
+
+<body>
+
+<header>Snake Leaderboard</header>
+
+<nav>
+
+<table id="leaderboard">
+    <thead>
+        <tr>
+            <th>Jméno</th>
+            <th>Obtížnost</th>
+            <th>Ovoce</th>
+            <th>Skóre</th>
+        </tr>
+    </thead>
+    <tbody id="leaderboardBody"></tbody>
+</table>
+
+<br>
+
+<input id="playerName" placeholder="Zadej jméno" maxlength="20">
+<button onclick="saveName()">Uložit</button>
+
+<hr>
+
+<div class="controls">
+
+    <div class="difficulty">
+        <h3>Obtížnost</h3>
+        <button onclick="setDifficulty(0)">Lehká</button>
+        <button onclick="setDifficulty(1)">Střední</button>
+        <button onclick="setDifficulty(2)">Těžká</button>
+        <button onclick="setDifficulty(3)">Chaos</button>
+    </div>
+
+    <div class="actions">
+        <h3>Akce</h3>
+        <button onclick="clearLeaderboard()">Vymazat záznamy</button>
+        <button onclick="goBack()">Zpět</button>
+    </div>
+
+</div>
+
+</nav>
+
+<footer>Demonstrační firmware pro ESP32</footer>
+
+<script>
+
+function setDifficulty(level){
+    fetch('/snake/setDifficulty?level='+level);
+}
+
+// ulozeni jmena
+function saveName(){
+    let name = document.getElementById("playerName").value;
+
+    if(name.length > 0){
+        fetch('/snake/setName?name='+encodeURIComponent(name))
+        .then(() => {
+            document.getElementById("playerName").value = '';
+            updateLeaderboard();
+        });
+    }
+}
+
+// vymazani leaderboardu
+function clearLeaderboard(){
+    if(confirm("Opravdu smazat všechny záznamy?")){
+        fetch('/snake/clearLeaderboard')
+        .then(() => {
+            updateLeaderboard();
+        });
+    }
+}
+
+// návrat na root
+function goBack(){
+    fetch('/snake/exit') 
+    .then(() => { 
+        window.location.href = '/'; 
+    });
+}
+
+// načtení leaderboardu z ESP
+function updateLeaderboard(){
+    fetch('/snake/leaderboard')
+    .then(resp => {
+        if(!resp.ok) throw new Error("Network error");
+        return resp.json();
+    })
+    .then(data => {
+
+        let tbody = '';
+
+        data.forEach(item => {
+            tbody += `
+                <tr>
+                    <td>${item.name}</td>
+                    <td>${item.difficulty}</td>
+                    <td>${item.score}</td>
+                    <td>${item.weightedScore ?? item.score}</td>
+                </tr>
+            `;
+        });
+
+        document.getElementById('leaderboardBody').innerHTML = tbody;
+    })
+    .catch(err => {
+        console.log("Leaderboard error:", err);
+    });
+}
+
+// refresh každé 2s
+setInterval(updateLeaderboard, 2000);
+updateLeaderboard();
+
+</script>
+
+</body>
+</html>

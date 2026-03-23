@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Demonstrační firmware pro ESP32</title>
+
+    <link rel="stylesheet" type="text/css" href="/style-main.css">
+</head>
+<body>
+
+<header>Hlavní menu</header>
+
+<nav>
+    <a href="#" id="ppgLink">PPG</a>
+    <a href="#" id="levelLink">Gyroskop</a>
+    <a href="#" id="snakeLink">Had</a>
+    <a href="#" id="rgbLink">Ovládání barevné LED</a>
+</nav>
+
+<footer>Demonstrační firmware pro ESP32</footer>
+
+<script>
+document.getElementById("rgbLink").addEventListener("click", function(e){
+    e.preventDefault();
+    window.location.href = '/rgb';
+});
+
+document.getElementById("snakeLink").addEventListener("click", function(e){
+    e.preventDefault();
+    window.location.href = '/snake';
+});
+
+document.getElementById("levelLink").addEventListener("click", function(e){
+    e.preventDefault();
+    window.location.href = '/level';
+});
+
+document.getElementById("ppgLink").addEventListener("click", function(e){
+    e.preventDefault();
+    window.location.href = '/ppg';
+});
+</script>
+
+</body>
+</html>

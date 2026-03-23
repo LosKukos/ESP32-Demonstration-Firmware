@@ -1,0 +1,94 @@
+body {
+    font-family: Arial, sans-serif;
+    background-color: #1a1a1a;
+    color: #fff;
+    margin: 0;
+    padding: 0;
+}
+
+/* Header */
+header {
+    background-color: #333;
+    padding: 16px;
+    text-align: center;
+    font-size: 1.6em;
+    font-weight: bold;
+    border-bottom: 2px solid #ff6600;
+}
+
+/* Layout container */
+.container {
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+/* Cards */
+.card {
+    background-color: #2a2a2a;
+    border-radius: 12px;
+    padding: 15px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.4);
+}
+
+/* BPM / HRV display */
+.metrics {
+    display: flex;
+    justify-content: space-around;
+    text-align: center;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.metric {
+    flex: 1;
+    min-width: 120px;
+}
+
+.metric h2 {
+    margin: 5px 0;
+    font-size: 2em;
+    color: #ff6600;
+}
+
+.metric p {
+    margin: 0;
+    color: #aaa;
+}
+
+/* Graph containers */
+.chart-container {
+    width: 100%;
+    height: 250px;
+}
+
+/* Canvas styling */
+canvas {
+    width: 100% !important;
+    height: 100% !important;
+}
+
+/* Footer */
+footer {
+    text-align: center;
+    padding: 10px;
+    font-size: 0.85em;
+    color: #777;
+    border-top: 1px solid #333;
+}
+
+/* Buttons (pokud budeš něco ovládat) */
+button {
+    background-color: #ff6600;
+    border: none;
+    padding: 10px 15px;
+    color: white;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.3s;
+}
+
+button:hover {
+    background-color: #e65c00;
+}

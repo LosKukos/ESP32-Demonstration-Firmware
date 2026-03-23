@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RGB Menu</title>
+
+<link rel="stylesheet" type="text/css" href="/style-rgb.css">
+</head>
+
+<body>
+
+<header>Ovládání barevné LED</header>
+
+<div class="slider-container">
+<label for="r">Červená: <span id="rval">0</span></label>
+<input type="range" id="r" min="0" max="255" value="0">
+</div>
+
+<div class="slider-container">
+<label for="g">Zelená: <span id="gval">0</span></label>
+<input type="range" id="g" min="0" max="255" value="0">
+</div>
+
+<div class="slider-container">
+<label for="b">Modrá: <span id="bval">0</span></label>
+<input type="range" id="b" min="0" max="255" value="0">
+</div>
+
+<div class="center">
+<div class="color-display" id="colorBox"></div>
+<div id="hexVal">HEX: #000000</div>
+
+<div>
+<button class="btn" id="resetBtn">Restart</button>
+<button class="btn" id="backBtn">Zpět</button>
+</div>
+</div>
+
+<script>
+    let lastR = -1, lastG = -1, lastB = -1;
+
+    const rSlider = document.getElementById("r");
+    const gSlider = document.getElementById("g");
+    const bSlider = document.getElementById("b");
+
+    const rVal = document.getElementById("rval");
+    const gVal = document.getElementById("gval");
+    const bVal = document.getElementById("bval");
+
+    const colorBox = document.getElementById("colorBox");
+    const hexVal = document.getElementById("hexVal");
+
+    let lastSendTime = 0;
+    const SEND_INTERVAL = 80; // ms
+
+    function sendRGB(r,g,b){
+        const now = Date.now();
+        if (now - lastSendTime < SEND_INTERVAL) return;
+
+        lastSendTime = now;
+        fetch("/rgb/update?r="+r+"&g="+g+"&b="+b);
+    }
+
+    function quantize(v){
+        return (v / 10 | 0) * 10; // rychlejší než Math.round
+    }
+
+    function updateColorDisplay(send=true, final=false){
+
+        let rRaw = rSlider.value|0;
+        let gRaw = gSlider.value|0;
+        let bRaw = bSlider.value|0;
+
+        let r = final ? rRaw : quantize(rRaw);
+        let g = final ? gRaw : quantize(gRaw);
+        let b = final ? bRaw : quantize(bRaw);
+
+        rVal.textContent = rRaw;
+        gVal.textContent = gRaw;
+        bVal.textContent = bRaw;
+
+        colorBox.style.backgroundColor = "rgb("+rRaw+","+gRaw+","+bRaw+")";
+
+        hexVal.textContent = "HEX: #" +
+            rRaw.toString(16).padStart(2,"0") +
+            gRaw.toString(16).padStart(2,"0") +
+            bRaw.toString(16).padStart(2,"0");
+
+        if(send){
+            if(!final){
+                if(r !== lastR || g !== lastG || b !== lastB){
+                    lastR = r; lastG = g; lastB = b;
+                    sendRGB(r,g,b);
+                }
+            } else {
+                sendRGB(rRaw,gRaw,bRaw);
+            }
+        }
+    }
+
+    function bindSlider(slider){
+        slider.addEventListener("input", ()=>updateColorDisplay(true,false));
+        ["mouseup","touchend","change"].forEach(e=>{
+            slider.addEventListener(e, ()=>updateColorDisplay(true,true));
+        });
+    }
+
+    bindSlider(rSlider);
+    bindSlider(gSlider);
+    bindSlider(bSlider);
+
+    document.getElementById("resetBtn").onclick = ()=>fetch("/rgb/reset");
+
+    document.getElementById("backBtn").onclick = async ()=>{
+        await fetch("/rgb/exit");
+        location.href="/";
+    };
+
+    updateColorDisplay(false);
+</script>
+
+</body>
+</html>

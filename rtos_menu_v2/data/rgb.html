@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RGB Menu</title>
+    <link rel="stylesheet" type="text/css" href="/style-rgb.css">
+</head>
+<body>
+
+<header>Ovládání barevné LED</header>
+
+<div class="container">
+
+    <div class="card">
+        <div class="slider-group">
+            <div class="slider-row">
+                <label for="r">Červená <span id="rLabel">0</span></label>
+                <input type="range" id="r" min="0" max="255" value="0">
+            </div>
+
+            <div class="slider-row">
+                <label for="g">Zelená <span id="gLabel">0</span></label>
+                <input type="range" id="g" min="0" max="255" value="0">
+            </div>
+
+            <div class="slider-row">
+                <label for="b">Modrá <span id="bLabel">0</span></label>
+                <input type="range" id="b" min="0" max="255" value="0">
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="preview-box">
+            <div class="color-display" id="colorBox"></div>
+            <div id="hexVal">HEX: #000000</div>
+        </div>
+
+        <div class="actions">
+            <button id="resetBtn">Restart</button>
+            <button id="backBtn">Zpět</button>
+        </div>
+    </div>
+</div>
+
+<footer>Demonstrační firmware pro ESP32</footer>
+
+<script>
+    let lastSentR = -1;
+    let lastSentG = -1;
+    let lastSentB = -1;
+
+    let lastSendTime = 0;
+    const SEND_INTERVAL = 80;
+    const POLL_INTERVAL = 1000;
+
+    const rSlider = document.getElementById("r");
+    const gSlider = document.getElementById("g");
+    const bSlider = document.getElementById("b");
+
+    const rLabel = document.getElementById("rLabel");
+    const gLabel = document.getElementById("gLabel");
+    const bLabel = document.getElementById("bLabel");
+
+    const colorBox = document.getElementById("colorBox");
+    const hexVal = document.getElementById("hexVal");
+
+    function quantize(v) {
+        return ((v / 10) | 0) * 10;
+    }
+
+    function updateLabelsAndPreview(r, g, b) {
+        rLabel.textContent = r;
+        gLabel.textContent = g;
+        bLabel.textContent = b;
+
+        colorBox.style.backgroundColor = `rgb(${r},${g},${b})`;
+        hexVal.textContent =
+            "HEX: #" +
+            r.toString(16).padStart(2, "0").toUpperCase() +
+            g.toString(16).padStart(2, "0").toUpperCase() +
+            b.toString(16).padStart(2, "0").toUpperCase();
+    }
+
+    function setUiValues(r, g, b) {
+        rSlider.value = r;
+        gSlider.value = g;
+        bSlider.value = b;
+        updateLabelsAndPreview(r, g, b);
+    }
+
+    async function sendRGB(r, g, b) {
+        const now = Date.now();
+        if (now - lastSendTime < SEND_INTERVAL) return;
+
+        lastSendTime = now;
+
+        try {
+            await fetch(`/rgb/update?r=${r}&g=${g}&b=${b}`, { cache: "no-store" });
+        } catch (e) {
+            console.error("RGB update failed:", e);
+        }
+    }
+
+    function updateColorDisplay(send = true, final = false) {
+        const rRaw = rSlider.value | 0;
+        const gRaw = gSlider.value | 0;
+        const bRaw = bSlider.value | 0;
+
+        const rSend = final ? rRaw : quantize(rRaw);
+        const gSend = final ? gRaw : quantize(gRaw);
+        const bSend = final ? bRaw : quantize(bRaw);
+
+        updateLabelsAndPreview(rRaw, gRaw, bRaw);
+
+        if (!send) return;
+
+        if (!final) {
+            if (rSend !== lastSentR || gSend !== lastSentG || bSend !== lastSentB) {
+                lastSentR = rSend;
+                lastSentG = gSend;
+                lastSentB = bSend;
+                sendRGB(rSend, gSend, bSend);
+            }
+        } else {
+            lastSentR = rRaw;
+            lastSentG = gRaw;
+            lastSentB = bRaw;
+            sendRGB(rRaw, gRaw, bRaw);
+        }
+    }
+
+    function bindSlider(slider) {
+        slider.addEventListener("input", () => updateColorDisplay(true, false));
+
+        ["mouseup", "touchend", "change"].forEach(eventName => {
+            slider.addEventListener(eventName, () => updateColorDisplay(true, true));
+        });
+    }
+
+    async function fetchState() {
+        try {
+            const response = await fetch("/rgb/state", { cache: "no-store" });
+            if (!response.ok) return;
+
+            const data = await response.json();
+            const r = Number(data.r) || 0;
+            const g = Number(data.g) || 0;
+            const b = Number(data.b) || 0;
+
+            setUiValues(r, g, b);
+            lastSentR = r;
+            lastSentG = g;
+            lastSentB = b;
+        } catch (e) {
+            console.error("RGB state fetch failed:", e);
+        }
+    }
+
+    bindSlider(rSlider);
+    bindSlider(gSlider);
+    bindSlider(bSlider);
+
+    document.getElementById("resetBtn").addEventListener("click", async () => {
+        try {
+            await fetch("/rgb/reset", { cache: "no-store" });
+        } catch (e) {
+            console.error("RGB reset failed:", e);
+        }
+
+        setUiValues(0, 0, 0);
+        lastSentR = 0;
+        lastSentG = 0;
+        lastSentB = 0;
+    });
+
+    document.getElementById("backBtn").addEventListener("click", async () => {
+        try {
+            await fetch("/rgb/exit", { cache: "no-store" });
+        } catch (e) {
+            console.error("RGB exit failed:", e);
+        }
+
+        location.href = "/";
+    });
+
+    fetchState();
+    setInterval(fetchState, POLL_INTERVAL);
+</script>
+
+</body>
+</html>

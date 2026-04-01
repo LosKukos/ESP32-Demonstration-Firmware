@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gyroskop</title>
+    <link rel="stylesheet" type="text/css" href="/style-level.css">
+</head>
+<body>
+
+<header>Gyroskop</header>
+
+<div class="container">
+    <div class="card metrics">
+        <div class="metric">
+            <p>Náklon X</p>
+            <h2 id="tiltX">--</h2>
+        </div>
+
+        <div class="metric">
+            <p>Náklon Y</p>
+            <h2 id="tiltY">--</h2>
+        </div>
+
+        <div class="metric">
+            <p>Stav</p>
+            <h2 id="status" class="status-text">--</h2>
+        </div>
+    </div>
+
+    <div class="card">
+        <h3>Vodováha</h3>
+
+        <div class="level-wrapper">
+            <div class="level-stage" id="levelStage">
+                <div class="grid"></div>
+                <div class="crosshair crosshair-horizontal"></div>
+                <div class="crosshair crosshair-vertical"></div>
+                <div class="ball" id="ball"></div>
+            </div>
+        </div>
+
+        <p class="hint">
+            Kulička kopíruje polohu jako na OLED displeji.
+        </p>
+
+        <div class="actions">
+            <button id="calibrateBtn">Kalibrace</button>
+            <button id="backBtn">Zpět</button>
+        </div>
+    </div>
+</div>
+
+<footer>Demonstrační firmware pro ESP32</footer>
+
+<script>
+const tiltXEl = document.getElementById("tiltX");
+const tiltYEl = document.getElementById("tiltY");
+const statusEl = document.getElementById("status");
+const ballEl = document.getElementById("ball");
+
+const DISPLAY_INPUT_RANGE = 17000;
+const BALL_MARGIN_PERCENT = 6;
+
+function clamp(value, min, max) {
+    return Math.max(min, Math.min(max, value));
+}
+
+function mapTilt(value) {
+    const normalized = (value + DISPLAY_INPUT_RANGE) / (2 * DISPLAY_INPUT_RANGE);
+    const clamped = clamp(normalized, 0, 1);
+    return BALL_MARGIN_PERCENT + clamped * (100 - BALL_MARGIN_PERCENT * 2);
+}
+
+function updateBall(x, y) {
+    const xPos = mapTilt(x);
+    const yPos = mapTilt(y);
+
+    ballEl.style.left = `${xPos}%`;
+    ballEl.style.top = `${yPos}%`;
+}
+
+function setStatus(text, className) {
+    statusEl.textContent = text;
+    statusEl.className = `status-text ${className}`;
+}
+
+function setOfflineUi() {
+    tiltXEl.textContent = "--";
+    tiltYEl.textContent = "--";
+    setStatus("OFFLINE", "status-offline");
+}
+
+async function fetchLevelData() {
+    const response = await fetch("/level/update", { cache: "no-store" });
+
+    if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+    }
+
+    return response.json();
+}
+
+function updateUi(data) {
+    const x = Number(data?.x);
+    const y = Number(data?.y);
+    const calibrating = Boolean(data?.calibrating);
+    const sensorOk = Boolean(data?.sensorOk);
+
+    tiltXEl.textContent = Number.isFinite(x) ? x.toFixed(0) : "--";
+    tiltYEl.textContent = Number.isFinite(y) ? y.toFixed(0) : "--";
+
+    if (!sensorOk) {
+        setStatus("ODPOJEN", "status-error");
+    } else if (calibrating) {
+        setStatus("KALIBRACE", "status-calibrating");
+    } else {
+        setStatus("PŘIPOJEN", "status-ok");
+    }
+
+    if (Number.isFinite(x) && Number.isFinite(y)) {
+        updateBall(x, y);
+    }
+}
+
+async function refreshLevel() {
+    try {
+        const data = await fetchLevelData();
+        updateUi(data);
+    } catch (error) {
+        setOfflineUi();
+    }
+}
+
+document.getElementById("calibrateBtn").addEventListener("click", async () => {
+    try {
+        await fetch("/level/calibrate", { cache: "no-store" });
+    } catch (error) {
+        console.error("Kalibrace selhala:", error);
+    }
+});
+
+document.getElementById("backBtn").addEventListener("click", async () => {
+    try {
+        await fetch("/level/exit", { cache: "no-store" });
+    } catch (error) {
+        console.error("Exit selhal:", error);
+    }
+
+    window.location.href = "/";
+});
+
+refreshLevel();
+setInterval(refreshLevel, 100);
+</script>
+
+</body>
+</html>

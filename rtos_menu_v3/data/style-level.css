@@ -1,0 +1,208 @@
+body {
+    font-family: Arial, sans-serif;
+    background-color: #1a1a1a;
+    color: #fff;
+    margin: 0;
+    padding: 0;
+}
+
+/* Header */
+header {
+    background-color: #333;
+    padding: 16px;
+    text-align: center;
+    font-size: 1.6em;
+    font-weight: bold;
+    border-bottom: 2px solid #ff6600;
+}
+
+/* Layout */
+.container {
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+/* Cards */
+.card {
+    background-color: #2a2a2a;
+    border-radius: 12px;
+    padding: 15px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.4);
+}
+
+.card h3 {
+    margin-top: 0;
+    margin-bottom: 14px;
+    color: #ff6600;
+    font-size: 1.1em;
+}
+
+/* Metrics */
+.metrics {
+    display: flex;
+    justify-content: space-around;
+    text-align: center;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.metric {
+    flex: 1;
+    min-width: 120px;
+}
+
+.metric h2 {
+    margin: 5px 0;
+    font-size: 2em;
+    color: #ff6600;
+}
+
+.metric p {
+    margin: 0;
+    color: #aaa;
+}
+
+.status-text {
+    font-size: 1.3em !important;
+}
+
+.status-ok {
+    color: #28c76f !important;
+}
+
+.status-offline {
+    color: #ff9f43 !important;
+}
+
+.status-calibrating {
+    color: #4da3ff !important;
+}
+
+.status-error {
+    color: #ff6363 !important;
+}
+
+/* Level area */
+.level-wrapper {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+}
+
+.level-stage {
+    position: relative;
+    width: 100%;
+    max-width: 420px;
+    aspect-ratio: 2 / 1;
+    background: linear-gradient(180deg, #202020 0%, #181818 100%);
+    border: 2px solid #444;
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: inset 0 0 14px rgba(0, 0, 0, 0.45);
+}
+
+.grid {
+    position: absolute;
+    inset: 0;
+    background-image:
+        linear-gradient(to right, rgba(255,255,255,0.04) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255,255,255,0.04) 1px, transparent 1px);
+    background-size: 24px 24px;
+}
+
+.crosshair {
+    position: absolute;
+    background-color: rgba(255, 102, 0, 0.3);
+}
+
+.crosshair-horizontal {
+    left: 0;
+    right: 0;
+    top: 50%;
+    height: 2px;
+    transform: translateY(-50%);
+}
+
+.crosshair-vertical {
+    top: 0;
+    bottom: 0;
+    left: 50%;
+    width: 2px;
+    transform: translateX(-50%);
+}
+
+.ball {
+    position: absolute;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 30% 30%, #ffd199 0%, #ff9a3d 35%, #ff6600 70%, #cc5200 100%);
+    box-shadow:
+        0 0 18px rgba(255, 102, 0, 0.5),
+        inset -3px -3px 6px rgba(0, 0, 0, 0.25),
+        inset 2px 2px 4px rgba(255, 255, 255, 0.2);
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    transition:
+        left 0.08s linear,
+        top 0.08s linear,
+        box-shadow 0.2s ease;
+}
+
+.hint {
+    margin: 12px 0 0 0;
+    text-align: center;
+    color: #aaa;
+    font-size: 0.95em;
+}
+
+/* Buttons */
+button {
+    background-color: #ff6600;
+    border: none;
+    padding: 10px 15px;
+    color: white;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.3s;
+    font-size: 0.95em;
+}
+
+button:hover {
+    background-color: #e65c00;
+}
+
+.actions {
+    margin-top: 16px;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(120px, 1fr));
+    gap: 10px;
+}
+
+/* Footer */
+footer {
+    text-align: center;
+    padding: 10px;
+    font-size: 0.85em;
+    color: #777;
+    border-top: 1px solid #333;
+}
+
+/* Mobile */
+@media (max-width: 480px) {
+    .metric h2 {
+        font-size: 1.6em;
+    }
+
+    .level-stage {
+        aspect-ratio: 1.8 / 1;
+    }
+
+    .ball {
+        width: 20px;
+        height: 20px;
+    }
+}

@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PPG Monitor</title>
+    <link rel="stylesheet" type="text/css" href="/style-ppg.css">
+</head>
+<body>
+
+<header>PPG Monitor</header>
+
+<div class="container">
+    <div class="card metrics">
+        <div class="metric">
+            <p>BPM</p>
+            <h2 id="bpm">--</h2>
+        </div>
+
+        <div class="metric">
+            <p>Režim LED</p>
+            <h2 id="mode" class="mode-text">
+                <span id="modeBadge" class="mode-badge mode-ir">IR</span>
+            </h2>
+        </div>
+
+        <div class="metric">
+            <p>Stav</p>
+            <h2 id="status">--</h2>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="chart-wrapper">
+            <div class="chart-container">
+                <canvas id="combinedChart"></canvas>
+            </div>
+        </div>
+
+        <div class="chart-legend">
+            <div class="legend-item legend-ir">
+                <span class="legend-line"></span>
+                <span>BPM (IR)</span>
+            </div>
+            <div class="legend-item legend-red">
+                <span class="legend-line"></span>
+                <span>BPM (RED)</span>
+            </div>
+        </div>
+
+        <div class="chart-tooltip" id="chartTooltip">
+            Klikni do grafu pro zobrazení hodnoty.
+        </div>
+
+        <div class="chart-actions">
+            <button onclick="toggleLed()">Přepnout IR / RED</button>
+            <button onclick="toggleAutozoom()">Autozoom</button>
+            <button onclick="runCalibration()">Kalibrace</button>
+            <button class="wide-button" onclick="goBack()">Zpět</button>
+        </div>
+    </div>
+</div>
+
+<footer>Demonstrační firmware pro ESP32</footer>
+
+<script>
+const bpmEl = document.getElementById("bpm");
+const statusEl = document.getElementById("status");
+const modeBadgeEl = document.getElementById("modeBadge");
+
+const canvas = document.getElementById("combinedChart");
+const tooltipEl = document.getElementById("chartTooltip");
+const ctx = canvas.getContext("2d");
+
+const MAX_POINTS = 300;
+const bpmData = [];
+const modeData = [];
+const labels = [];
+
+let selectedIndex = -1;
+let currentMode = "IR";
+
+function getModeColor(mode) {
+    return mode === "RED" ? "#ff6363" : "#4da3ff";
+}
+
+function normalizeMode(mode) {
+    return mode === "RED" ? "RED" : "IR";
+}
+
+function applyModeUi(mode) {
+    currentMode = normalizeMode(mode);
+
+    modeBadgeEl.textContent = currentMode;
+    modeBadgeEl.classList.toggle("mode-ir", currentMode === "IR");
+    modeBadgeEl.classList.toggle("mode-red", currentMode === "RED");
+}
+
+async function apiGet(url) {
+    const res = await fetch(url, { cache: "no-store" });
+    if (!res.ok) {
+        throw new Error(`HTTP ${res.status}`);
+    }
+    return res;
+}
+
+async function toggleLed() {
+    try {
+        await apiGet("/ppg/toggle-led");
+    } catch (e) {
+        console.error("toggle-led failed:", e);
+    }
+}
+
+async function toggleAutozoom() {
+    try {
+        await apiGet("/ppg/autozoom");
+    } catch (e) {
+        console.error("autozoom failed:", e);
+    }
+}
+
+async function runCalibration() {
+    try {
+        await apiGet("/ppg/calibrate");
+    } catch (e) {
+        console.error("calibration failed:", e);
+    }
+}
+
+async function exitPpg() {
+    try {
+        await apiGet("/ppg/exit");
+    } catch (e) {
+        console.error("exit failed:", e);
+    }
+    window.location.href = "/";
+}
+
+function goBack() {
+    exitPpg();
+}
+
+function resizeCanvas() {
+    const rect = canvas.getBoundingClientRect();
+    const ratio = window.devicePixelRatio || 1;
+
+    canvas.width = Math.max(320, Math.floor(rect.width * ratio));
+    canvas.height = Math.max(220, Math.floor(rect.height * ratio));
+
+    drawChart();
+}
+
+window.addEventListener("resize", resizeCanvas);
+
+async function fetchData() {
+    const res = await apiGet("/ppg/update");
+    return await res.json();
+}
+
+function pushPoint(array, value) {
+    array.push(value);
+    if (array.length > MAX_POINTS) {
+        array.shift();
+    }
+}
+
+function updateStatus(text, cls) {
+    statusEl.innerText = text;
+    statusEl.classList.remove("status-ok", "status-offline", "status-nosignal");
+    if (cls) {
+        statusEl.classList.add(cls);
+    }
+}
+
+function updateUi(data) {
+    const bpm = Number(data?.bpm);
+    const mode = normalizeMode(typeof data?.mode === "string" ? data.mode.toUpperCase() : "IR");
+
+    const bpmValid = Number.isFinite(bpm) && bpm > 0;
+
+    bpmEl.innerText = bpmValid ? String(bpm) : "--";
+    updateStatus(bpmValid ? "OK" : "NO SIGNAL", bpmValid ? "status-ok" : "status-nosignal");
+    applyModeUi(mode);
+
+    const now = new Date();
+    const label = now.toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit"
+    });
+
+    pushPoint(labels, label);
+    pushPoint(bpmData, bpmValid ? bpm : null);
+    pushPoint(modeData, mode);
+
+    if (selectedIndex >= labels.length) {
+        selectedIndex = labels.length - 1;
+    }
+
+    updateTooltip();
+    drawChart();
+}
+
+function setDisconnectedUi() {
+    bpmEl.innerText = "--";
+    updateStatus("OFFLINE", "status-offline");
+}
+
+function getRange(values, fallbackMin, fallbackMax) {
+    const filtered = values.filter(v => Number.isFinite(v));
+
+    if (!filtered.length) {
+        return { min: fallbackMin, max: fallbackMax };
+    }
+
+    let min = Math.min(...filtered);
+    let max = Math.max(...filtered);
+
+    if (min === max) {
+        min -= 1;
+        max += 1;
+    }
+
+    const padding = (max - min) * 0.15;
+
+    return {
+        min: min - padding,
+        max: max + padding
+    };
+}
+
+function mapValue(value, min, max, top, bottom) {
+    return bottom - ((value - min) / (max - min)) * (bottom - top);
+}
+
+function drawAxisLabel(text, x, y, align = "left") {
+    const ratio = window.devicePixelRatio || 1;
+
+    ctx.save();
+    ctx.fillStyle = "#aaa";
+    ctx.font = `${12 * ratio}px Arial`;
+    ctx.textAlign = align;
+    ctx.fillText(text, x, y);
+    ctx.restore();
+}
+
+function drawColoredSeries(data, modes, range, chartArea) {
+    const ratio = window.devicePixelRatio || 1;
+
+    for (let i = 1; i < data.length; i++) {
+        const prevValue = data[i - 1];
+        const currValue = data[i];
+
+        if (!Number.isFinite(prevValue) || !Number.isFinite(currValue)) {
+            continue;
+        }
+
+        const x1 = chartArea.left + ((i - 1) * chartArea.width) / Math.max(1, MAX_POINTS - 1);
+        const x2 = chartArea.left + (i * chartArea.width) / Math.max(1, MAX_POINTS - 1);
+        const y1 = mapValue(prevValue, range.min, range.max, chartArea.top, chartArea.bottom);
+        const y2 = mapValue(currValue, range.min, range.max, chartArea.top, chartArea.bottom);
+
+        const segmentMode = normalizeMode(modes[i] || modes[i - 1] || "IR");
+
+        ctx.save();
+        ctx.strokeStyle = getModeColor(segmentMode);
+        ctx.lineWidth = 2 * ratio;
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.stroke();
+        ctx.restore();
+    }
+}
+
+function drawSelectedMarker(chartArea, bpmRange) {
+    if (selectedIndex < 0 || selectedIndex >= labels.length) return;
+
+    const ratio = window.devicePixelRatio || 1;
+    const x = chartArea.left + (selectedIndex * chartArea.width) / Math.max(1, MAX_POINTS - 1);
+
+    ctx.save();
+    ctx.strokeStyle = "#ff9f43";
+    ctx.lineWidth = 1.5 * ratio;
+    ctx.beginPath();
+    ctx.moveTo(x, chartArea.top);
+    ctx.lineTo(x, chartArea.bottom);
+    ctx.stroke();
+    ctx.restore();
+
+    const bpm = bpmData[selectedIndex];
+    const pointMode = normalizeMode(modeData[selectedIndex] || "IR");
+
+    if (Number.isFinite(bpm)) {
+        const y = mapValue(bpm, bpmRange.min, bpmRange.max, chartArea.top, chartArea.bottom);
+        ctx.save();
+        ctx.fillStyle = getModeColor(pointMode);
+        ctx.beginPath();
+        ctx.arc(x, y, 4 * ratio, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+    }
+}
+
+function drawChart() {
+    const ratio = window.devicePixelRatio || 1;
+    const width = canvas.width;
+    const height = canvas.height;
+
+    ctx.clearRect(0, 0, width, height);
+
+    const chartArea = {
+        left: 52 * ratio,
+        right: width - 20 * ratio,
+        top: 20 * ratio,
+        bottom: height - 34 * ratio
+    };
+
+    chartArea.width = chartArea.right - chartArea.left;
+    chartArea.height = chartArea.bottom - chartArea.top;
+
+    const bpmRange = getRange(bpmData, 40, 140);
+
+    ctx.save();
+    ctx.strokeStyle = "#3a3a3a";
+    ctx.lineWidth = 1 * ratio;
+
+    for (let i = 0; i <= 5; i++) {
+        const y = chartArea.top + (chartArea.height * i) / 5;
+        ctx.beginPath();
+        ctx.moveTo(chartArea.left, y);
+        ctx.lineTo(chartArea.right, y);
+        ctx.stroke();
+    }
+
+    for (let i = 0; i <= 5; i++) {
+        const x = chartArea.left + (chartArea.width * i) / 5;
+        ctx.beginPath();
+        ctx.moveTo(x, chartArea.top);
+        ctx.lineTo(x, chartArea.bottom);
+        ctx.stroke();
+    }
+
+    ctx.strokeStyle = "#666";
+    ctx.beginPath();
+    ctx.moveTo(chartArea.left, chartArea.top);
+    ctx.lineTo(chartArea.left, chartArea.bottom);
+    ctx.lineTo(chartArea.right, chartArea.bottom);
+    ctx.stroke();
+    ctx.restore();
+
+    drawAxisLabel(`BPM ${Math.round(bpmRange.max)}`, chartArea.left, chartArea.top - 6 * ratio, "left");
+    drawAxisLabel(`${Math.round(bpmRange.min)}`, chartArea.left - 8 * ratio, chartArea.bottom + 4 * ratio, "right");
+
+    drawColoredSeries(bpmData, modeData, bpmRange, chartArea);
+    drawSelectedMarker(chartArea, bpmRange);
+
+    if (labels.length) {
+        drawAxisLabel(labels[0], chartArea.left, height - 8 * ratio, "left");
+        drawAxisLabel(labels[labels.length - 1], chartArea.right, height - 8 * ratio, "right");
+    }
+}
+
+function updateTooltip() {
+    if (selectedIndex < 0 || selectedIndex >= labels.length) {
+        tooltipEl.textContent = "Klikni do grafu pro zobrazení hodnoty.";
+        return;
+    }
+
+    const label = labels[selectedIndex] ?? "--:--:--";
+    const bpm = Number.isFinite(bpmData[selectedIndex]) ? bpmData[selectedIndex] : "--";
+    const mode = normalizeMode(modeData[selectedIndex] || "IR");
+
+    tooltipEl.textContent = `Čas: ${label} | BPM: ${bpm} | LED: ${mode}`;
+}
+
+function handleCanvasPointer(clientX) {
+    const rect = canvas.getBoundingClientRect();
+    const x = clientX - rect.left;
+    const ratio = window.devicePixelRatio || 1;
+    const widthPx = canvas.width;
+    const cssWidth = rect.width;
+
+    const xPx = (x / cssWidth) * widthPx;
+
+    const left = 52 * ratio;
+    const right = widthPx - 20 * ratio;
+    const usableWidth = right - left;
+
+    if (xPx < left || xPx > right || labels.length === 0) {
+        return;
+    }
+
+    const relative = (xPx - left) / usableWidth;
+    const index = Math.round(relative * Math.max(1, MAX_POINTS - 1));
+    const clamped = Math.max(0, Math.min(labels.length - 1, index));
+
+    selectedIndex = clamped;
+    updateTooltip();
+    drawChart();
+}
+
+canvas.addEventListener("click", (e) => {
+    handleCanvasPointer(e.clientX);
+});
+
+canvas.addEventListener("touchstart", (e) => {
+    if (e.touches && e.touches.length > 0) {
+        handleCanvasPointer(e.touches[0].clientX);
+    }
+}, { passive: true });
+
+async function update() {
+    try {
+        const data = await fetchData();
+        updateUi(data);
+    } catch (error) {
+        setDisconnectedUi();
+    }
+}
+
+applyModeUi("IR");
+resizeCanvas();
+update();
+setInterval(update, 1000);
+</script>
+
+</body>
+</html>

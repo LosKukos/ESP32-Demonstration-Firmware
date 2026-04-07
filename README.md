@@ -16,4 +16,4 @@ Aktuální moduly
   4. PPG.cpp - Modul dokončen, Web dokončen.
   5. RGBMENU.cpp - Modul dokončen, Web dokončen.
   6. Settings.cpp - WIP, Web nebude k dispozici, místo toho bluetooth rozhraní.
-  7. SnakeLib.cpp - Modul dokončen a okomentován, Web dokončen.
+  7. SnakeLib.cpp - Modul dokončen, Web dokončen.

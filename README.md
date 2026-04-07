@@ -10,11 +10,10 @@ Aktuální obsah:
 
 Roadmap
 Aktuální moduly
-  1. Controls.cpp - Modul dokončen a okomentován, Web není k dispozici z důvodu vlastností modulu.
-  2. Level.cpp - WIP
-  3. Menu.ino - WIP, Web dokončen.
-  4. PPG.cpp - WIP
-  5. RGBMENU.cpp - Modul dokončen a okomentován, Web dokončen.
-  6. Settings.cpp - WIP, Web nebude k dispozici - nutnost nastavit skrze Bluetooth, aby nedošlo k zablokování přístupu na WiFi zapomenutím údajů
+  1. Controls.cpp - Modul dokončen, Web není k dispozici z důvodu vlastností modulu.
+  2. Level.cpp - Modul dokončen, Web dokončen.
+  3. Menu.ino -Modul dokončen, Web dokončen.
+  4. PPG.cpp - Modul dokončen, Web dokončen.
+  5. RGBMENU.cpp - Modul dokončen, Web dokončen.
+  6. Settings.cpp - WIP, Web nebude k dispozici, místo toho bluetooth rozhraní.
   7. SnakeLib.cpp - Modul dokončen a okomentován, Web dokončen.
-  8. Web.cpp - Modul dokončen, vkládání HTML stránek

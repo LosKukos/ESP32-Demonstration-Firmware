@@ -1,6 +1,6 @@
 <mxfile host="app.diagrams.net" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36" version="29.6.1">
   <diagram name="Stránka-1" id="rhaRUnPUTmsQxr2fYM8P">
-    <mxGraphModel dx="958" dy="1235" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+    <mxGraphModel dx="1137" dy="1387" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
@@ -62,6 +62,14 @@
         </mxCell>
         <mxCell id="vLgVx2mUYJKyxe8QGB1I-8" parent="1" style="rounded=0;whiteSpace=wrap;html=1;rotation=90;fillColor=#f8cecc;strokeColor=#b85450;" value="" vertex="1">
           <mxGeometry height="125.95" width="329.67" x="-90.29" y="380.31" as="geometry" />
+        </mxCell>
+        <mxCell id="UKFMnMnPHEPJhCq-G8ux-2" edge="1" parent="1" source="vLgVx2mUYJKyxe8QGB1I-9" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.25;entryDx=0;entryDy=0;" target="vLgVx2mUYJKyxe8QGB1I-8" value="">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="106" y="239" />
+              <mxPoint x="106" y="239" />
+            </Array>
+          </mxGeometry>
         </mxCell>
         <mxCell id="vLgVx2mUYJKyxe8QGB1I-9" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" value="" vertex="1">
           <mxGeometry height="150" width="740" x="10" y="50" as="geometry" />
@@ -227,6 +235,15 @@
         </mxCell>
         <mxCell id="vLgVx2mUYJKyxe8QGB1I-123" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" value="Webové uživatelské rozhraní&lt;div&gt;(HTML/JS stránky, uloženy v LittleFS)&lt;/div&gt;" vertex="1">
           <mxGeometry height="50" width="505" x="141" y="60" as="geometry" />
+        </mxCell>
+        <mxCell id="UKFMnMnPHEPJhCq-G8ux-1" parent="1" style="outlineConnect=0;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;shape=mxgraph.aws3.internet_3;fillColor=#D2D3D3;gradientColor=none;" value="" vertex="1">
+          <mxGeometry height="54" width="79.5" x="54.089999999999975" y="56" as="geometry" />
+        </mxCell>
+        <mxCell id="UKFMnMnPHEPJhCq-G8ux-4" edge="1" parent="1" source="vLgVx2mUYJKyxe8QGB1I-8" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.347;entryDx=0;entryDy=0;entryPerimeter=0;" target="vLgVx2mUYJKyxe8QGB1I-5">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="UKFMnMnPHEPJhCq-G8ux-8" edge="1" parent="1" source="vLgVx2mUYJKyxe8QGB1I-5" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.613;entryY=0.016;entryDx=0;entryDy=0;entryPerimeter=0;" target="vLgVx2mUYJKyxe8QGB1I-8">
+          <mxGeometry relative="1" as="geometry" />
         </mxCell>
       </root>
     </mxGraphModel>

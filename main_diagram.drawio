@@ -435,6 +435,12 @@
         <mxCell id="2Zza5RRyRLBZMEzxYcOb-72" parent="1" style="shape=mxgraph.uml25.inputPin;html=1;points=[[0,0.5],[1,0.5]];" value="" vertex="1">
           <mxGeometry height="40" width="40" x="340" y="972.5" as="geometry" />
         </mxCell>
+        <mxCell id="H2iExOy6ZLwfPptJTrb5-1" parent="1" style="verticalLabelPosition=bottom;shadow=0;dashed=0;align=center;html=1;verticalAlign=top;shape=mxgraph.electrical.opto_electronics.led_2;pointerEvents=1;strokeColor=light-dark(#505050,#BFD3FF);fillColor=#DAE8FC;" value="" vertex="1">
+          <mxGeometry height="35" width="50" x="546.58" y="537.5" as="geometry" />
+        </mxCell>
+        <mxCell id="H2iExOy6ZLwfPptJTrb5-2" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="RGB Task" vertex="1">
+          <mxGeometry height="30" width="60" x="600" y="542" as="geometry" />
+        </mxCell>
       </root>
     </mxGraphModel>
   </diagram>

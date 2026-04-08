@@ -1,0 +1,23 @@
+Modul implementuje jednoduchou hru Had (Snake), která slouží jako demonstrace práce s uživatelským rozhraním, časováním a zpracováním vstupů na mikrokontroléru. Po vstupu do modulu je uživateli zobrazeno ovládací menu obsahující položky \textit{Start}, \textit{Nastavení} a \textit{Konec}, viz obrázek~\ref{fig:snake_both}.
+
+Pomocí levého a pravého tlačítka (D16 a D17) se uživatel pohybuje mezi jednotlivými položkami menu. Výběr konkrétní položky je proveden pomocí kapacitního dotykového senzoru. Volbou položky \textit{Start} dojde ke spuštění samotné hry.
+
+Po spuštění hry je inicializován herní stav, had je umístěn na výchozí pozici a na hrací ploše je vygenerováno první ovoce. Herní smyčka následně probíhá v pravidelných časových intervalech, jejichž délka závisí na zvolené obtížnosti. Implementace herní smyčky a aktualizace stavu je realizována v rámci modulu \texttt{Snake}, viz zdrojový soubor \texttt{snakelib.cpp}~\cite{snakelib}.
+
+Ovládání hada je realizováno pomocí tlačítek D16 a D17, kterými uživatel mění směr pohybu. Jedno tlačítko otáčí směr pohybu proti směru hodinových ručiček, druhé po směru hodinových ručiček. Změna směru je zpracována vždy pouze jednou v rámci jednoho kroku herní smyčky, čímž je zajištěno plynulé ovládání a zároveň je zabráněno neplatným pohybům, jako je okamžité otočení o 180°.
+
+Cílem hry je sbírat ovoce, které se po každém sebrání generuje na nové náhodné pozici. Při sebrání ovoce dojde k prodloužení hada a zvýšení skóre. Kolize hada se stěnou nebo s vlastním tělem vede k ukončení hry, které je doprovázeno haptickou odezvou pomocí bzučáku.
+
+Po ukončení hry je zobrazena obrazovka s výsledky, kde je uvedena zvolená obtížnost, počet nasbíraného ovoce a výsledné skóre. Skóre je vypočítáno jako součin počtu nasbíraného ovoce a koeficientu obtížnosti.
+
+V rámci položky \textit{Nastavení} má uživatel možnost zvolit obtížnost hry. Navigace probíhá stejným způsobem jako v hlavním menu modulu. K dispozici jsou čtyři úrovně obtížnosti: lehká, střední, těžká a chaos. Změna obtížnosti ovlivňuje rychlost herní smyčky a tím i celkovou náročnost hry. Po potvrzení výběru se uživatel vrací zpět do menu modulu.
+
+Volbou položky \textit{Konec} dojde k ukončení modulu a návratu do hlavního menu zařízení.
+
+Součástí modulu je také webová vrstva, která rozšiřuje možnosti ovládání a umožňuje správu výsledků hry prostřednictvím webového rozhraní dostupného přes WiFi připojení. Webová aplikace běží na vestavěném HTTP serveru zařízení a poskytuje uživateli přehled o dosažených výsledcích i možnost interakce s modulem.
+
+Uživatel může prostřednictvím webového rozhraní zobrazit tabulku nejlepších výsledků, ukládat nové záznamy, měnit obtížnost hry nebo provádět správu uložených dat, včetně jejich vymazání. Data jsou ukládána do souborového systému LittleFS, což umožňuje jejich zachování i po restartu zařízení.
+
+Komunikace mezi webovým rozhraním a firmwarem probíhá pomocí HTTP požadavků na definované endpointy, přičemž data jsou přenášena ve formátu JSON. Klientská část implementovaná v jazyce JavaScript zajišťuje pravidelné načítání dat a dynamickou aktualizaci obsahu bez nutnosti obnovení stránky.
+
+Vzájemné vztahy mezi jednotlivými částmi modulu, včetně herní logiky a webové vrstvy, jsou znázorněny na blokovém diagramu na obrázku~\ref{fig:snake_blockdiagram}.

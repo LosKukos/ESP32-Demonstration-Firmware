@@ -1,20 +1,19 @@
-Modul implementuje jednoduchou hru Had (Snake), která slouží jako demonstrace práce s uživatelským rozhraním, časováním a zpracováním vstupů na mikrokontroléru. Po vstupu do modulu je uživateli zobrazeno ovládací menu obsahující položky \textit{Start}, \textit{Nastavení} a \textit{Konec}, viz obrázek~\ref{fig:snake_both}.
+\section{Had}
+Modul implementuje jednoduchou hru Had (Snake), která slouží jako demonstrace práce s uživatelským rozhraním, časováním a zpracováním vstupů na mikrokontroléru. Po vstupu do modulu je uživateli zobrazeno ovládací menu obsahující položky Start pro spuštění hry, Nastavení pro volbu obtížnosti a Konec pro opuštění modulu, viz obrázek~\ref{fig:snake_both}.
 
-Pomocí levého a pravého tlačítka (D16 a D17) se uživatel pohybuje mezi jednotlivými položkami menu. Výběr konkrétní položky je proveden pomocí kapacitního dotykového senzoru. Volbou položky \textit{Start} dojde ke spuštění samotné hry.
+Po spuštění hry pomocí kapacitního senzoru dojde k inicializaci herního stavu, náhodnému umístění hada na hrací plochu a vygenerování prvního ovoce. Herní smyčka následně probíhá v pravidelných časových intervalech, které jsou závislé na zvolené obtížnosti. V každém kroku dochází k posunu hada, kontrole kolizí a případné aktualizaci herního stavu.
 
-Po spuštění hry je inicializován herní stav, had je umístěn na výchozí pozici a na hrací ploše je vygenerováno první ovoce. Herní smyčka následně probíhá v pravidelných časových intervalech, jejichž délka závisí na zvolené obtížnosti. Implementace herní smyčky a aktualizace stavu je realizována v rámci modulu \texttt{Snake}, viz zdrojový soubor \texttt{snakelib.cpp}~\cite{snakelib}.
+Pomocí tlačítek D16 a D17 může uživatel měnit směr pohybu hada, a to buď proti směru, nebo po směru hodinových ručiček. Změna směru je zpracována v rámci jednotlivých kroků herní smyčky, takže v jednom kroku může dojít pouze k jedné změně. Tím je zajištěno plynulé ovládání a zároveň je zabráněno okamžitému otočení o 180°, které by vedlo ke kolizi.
 
-Ovládání hada je realizováno pomocí tlačítek D16 a D17, kterými uživatel mění směr pohybu. Jedno tlačítko otáčí směr pohybu proti směru hodinových ručiček, druhé po směru hodinových ručiček. Změna směru je zpracována vždy pouze jednou v rámci jednoho kroku herní smyčky, čímž je zajištěno plynulé ovládání a zároveň je zabráněno neplatným pohybům, jako je okamžité otočení o 180°.
+Při sebrání potravy dojde k prodloužení hada a zvýšení skóre. Nová potrava je následně vygenerována na náhodné pozici v rámci hrací plochy. Při nárazu hada do sebe sama nebo do stěny dojde k haptické odezvě pomocí bzučáku a následnému ukončení hry.
 
-Cílem hry je sbírat ovoce, které se po každém sebrání generuje na nové náhodné pozici. Při sebrání ovoce dojde k prodloužení hada a zvýšení skóre. Kolize hada se stěnou nebo s vlastním tělem vede k ukončení hry, které je doprovázeno haptickou odezvou pomocí bzučáku.
+Na obrazovce „Konec hry“ je uživatel informován o zvolené obtížnosti, počtu nasbíraného ovoce a výsledném skóre. Skóre je vypočítáno jako součin počtu nasbíraného ovoce a koeficientu obtížnosti, čímž je zohledněna náročnost hry.
 
-Po ukončení hry je zobrazena obrazovka s výsledky, kde je uvedena zvolená obtížnost, počet nasbíraného ovoce a výsledné skóre. Skóre je vypočítáno jako součin počtu nasbíraného ovoce a koeficientu obtížnosti.
+V části Nastavení je uživateli nabídnuta volba mezi čtyřmi úrovněmi obtížnosti, konkrétně lehká, střední, těžká a chaos. Zvolená obtížnost ovlivňuje periodu herní smyčky, tedy rychlost pohybu hada, a zároveň výsledné skóre. Potvrzením výběru se uživatel vrací zpět do menu modulu.
 
-V rámci položky \textit{Nastavení} má uživatel možnost zvolit obtížnost hry. Navigace probíhá stejným způsobem jako v hlavním menu modulu. K dispozici jsou čtyři úrovně obtížnosti: lehká, střední, těžká a chaos. Změna obtížnosti ovlivňuje rychlost herní smyčky a tím i celkovou náročnost hry. Po potvrzení výběru se uživatel vrací zpět do menu modulu.
+Položka Konec slouží k opuštění modulu a návratu do hlavního menu.
 
-Volbou položky \textit{Konec} dojde k ukončení modulu a návratu do hlavního menu zařízení.
-
-Součástí modulu je také webová vrstva, která rozšiřuje možnosti ovládání a umožňuje správu výsledků hry prostřednictvím webového rozhraní dostupného přes WiFi připojení. Webová aplikace běží na vestavěném HTTP serveru zařízení a poskytuje uživateli přehled o dosažených výsledcích i možnost interakce s modulem.
+Součástí modulu je také webová vrstva, která rozšiřuje možnosti ovládání a umožňuje správu výsledků hry prostřednictvím webového rozhraní, dostupného přes WiFi připojení. Webová aplikace běží na vestavěném HTTP serveru zařízení a poskytuje uživateli přehled o dosažených výsledcích i možnost interakce s modulem.
 
 Uživatel může prostřednictvím webového rozhraní zobrazit tabulku nejlepších výsledků, ukládat nové záznamy, měnit obtížnost hry nebo provádět správu uložených dat, včetně jejich vymazání. Data jsou ukládána do souborového systému LittleFS, což umožňuje jejich zachování i po restartu zařízení.
 

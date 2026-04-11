@@ -49,8 +49,8 @@ private:
     Controls& controls;
     AsyncWebServer _server;
 
-    static constexpr const char* BT_default   = "ESP32 Demo FW";
-    static constexpr const char* WIFI_default = "ESP32-DemoBoard";
+    static constexpr const char* BT_default   = "DemoFW";
+    static constexpr const char* WIFI_default = "ESP32-Demo";
 
     // Connectivity state
     ConnectivityMode currentConnectivityMode = ConnectivityMode::WIFI;

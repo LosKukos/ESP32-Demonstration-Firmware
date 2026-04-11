@@ -383,7 +383,7 @@ void PPG::drawPPGCurve(Adafruit_SH1106G& display) {
     const int drawBottom = DISPLAY_HEIGHT - bottomMargin - 1;
     const int drawHeight = drawBottom - drawTop;
 
-    constexpr int manualAmplitude = 900;
+    constexpr int manualAmplitude = 1000;
     const int windowSize = min(bufferSize, 60);
 
     if (windowSize < 2 || drawHeight <= 0) {

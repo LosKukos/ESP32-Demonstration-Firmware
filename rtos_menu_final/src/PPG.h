@@ -54,7 +54,7 @@ private:
     static constexpr int intervalBufferSize = 3;
     static constexpr float filterWeight = 0.4f;
 
-    static constexpr int displayBaselineSampleCount = 100;
+    static constexpr int displayBaselineSampleCount = 150;
     long displayBaselineSum = 0;
     int displayBaselineCounter = 0;
     int displayBaseline = 0;

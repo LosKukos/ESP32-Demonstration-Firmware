@@ -26,3 +26,5 @@ Jednotlivé části systému jsou podrobně popsány v textu bakalářské prác
 ## Poznámka
 
 Tento repozitář je určen primárně pro účely odevzdání a dokumentace projektu.
+
+Žádost Etické komisi FEI byla odeslána dne 20.4.2026 na emailovou adresu: eticka.komise.fei@vsb.cz

@@ -11,6 +11,7 @@
 <header>Gyroskop</header>
 
 <div class="container">
+    <!-- Karty s aktuálními hodnotami náklonu a stavem senzoru -->
     <div class="card metrics">
         <div class="metric">
             <p>Náklon X</p>
@@ -28,6 +29,7 @@
         </div>
     </div>
 
+    <!-- Grafická vizualizace náklonu zařízení -->
     <div class="card">
         <h3>Vodováha</h3>
 
@@ -44,6 +46,7 @@
             Kulička kopíruje polohu jako na OLED displeji.
         </p>
 
+        <!-- Ovládací prvky modulu -->
         <div class="actions">
             <button id="calibrateBtn">Kalibrace</button>
             <button id="backBtn">Zpět</button>
@@ -67,12 +70,14 @@ function clamp(value, min, max) {
 }
 
 function mapTilt(value) {
+    // Přepočet hodnoty náklonu na procentuální pozici v rozhraní
     const normalized = (value + DISPLAY_INPUT_RANGE) / (2 * DISPLAY_INPUT_RANGE);
     const clamped = clamp(normalized, 0, 1);
     return BALL_MARGIN_PERCENT + clamped * (100 - BALL_MARGIN_PERCENT * 2);
 }
 
 function updateBall(x, y) {
+    // Aktualizace pozice kuličky podle náklonu
     const xPos = mapTilt(x);
     const yPos = mapTilt(y);
 
@@ -81,17 +86,20 @@ function updateBall(x, y) {
 }
 
 function setStatus(text, className) {
+    // Nastavení textového stavu senzoru
     statusEl.textContent = text;
     statusEl.className = `status-text ${className}`;
 }
 
 function setOfflineUi() {
+    // Zobrazení stavu při nedostupném zařízení
     tiltXEl.textContent = "--";
     tiltYEl.textContent = "--";
     setStatus("OFFLINE", "status-offline");
 }
 
 async function fetchLevelData() {
+    // Načtení aktuálních dat z firmware
     const response = await fetch("/level/update", { cache: "no-store" });
 
     if (!response.ok) {
@@ -102,6 +110,7 @@ async function fetchLevelData() {
 }
 
 function updateUi(data) {
+    // Aktualizace zobrazených hodnot podle odpovědi zařízení
     const x = Number(data?.x);
     const y = Number(data?.y);
     const calibrating = Boolean(data?.calibrating);
@@ -124,6 +133,7 @@ function updateUi(data) {
 }
 
 async function refreshLevel() {
+    // Periodická aktualizace dat modulu
     try {
         const data = await fetchLevelData();
         updateUi(data);
@@ -133,6 +143,7 @@ async function refreshLevel() {
 }
 
 document.getElementById("calibrateBtn").addEventListener("click", async () => {
+    // Spuštění kalibrace senzoru
     try {
         await fetch("/level/calibrate", { cache: "no-store" });
     } catch (error) {
@@ -141,6 +152,7 @@ document.getElementById("calibrateBtn").addEventListener("click", async () => {
 });
 
 document.getElementById("backBtn").addEventListener("click", async () => {
+    // Ukončení modulu a návrat do hlavního menu
     try {
         await fetch("/level/exit", { cache: "no-store" });
     } catch (error) {

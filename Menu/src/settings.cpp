@@ -194,7 +194,7 @@ void Settings::task(void *pvParameters) {
     Settings* self = static_cast<Settings*>(pvParameters);
 
     for (;;) {
-        // Pokud dojde k ukončení, task se uspí
+        // Pokud modul neběží, task se uspí
         if (!self->running) {
             vTaskSuspend(nullptr);
         }
@@ -687,4 +687,55 @@ void Settings::drawDebug() {
     else if (input.equalsIgnoreCase("reset")) {
         Serial.println("Restarting...");
         if (SerialBT.hasClient()) {
-            SerialBT.println("
+            SerialBT.println("Restarting...");
+        }
+
+        delay(200);
+        ESP.restart();
+    }
+
+    // Ukončení debug režimu
+    else if (input.equalsIgnoreCase("exit")) {
+        Serial.println("Opoustim debug");
+        if (SerialBT.hasClient()) {
+            SerialBT.println("Opoustim debug");
+        }
+
+        state = MENU;
+        drawMenu();
+    }
+
+    // Neznámý příkaz
+    else {
+        Serial.println("Neznamy prikaz. Zadej help");
+        if (SerialBT.hasClient()) {
+            SerialBT.println("Neznamy prikaz. Zadej help");
+        }
+    }
+}
+
+bool Settings::isRunning() {
+    return running;
+}
+
+void Settings::updateRainbow() {
+    if (millis() - lastRainbowTime < 50) {
+        return;
+    }
+
+    lastRainbowTime = millis();
+
+    // Animace adresovatelné LED v menu nastavení
+    controls.mutexLed([&]() {
+        for (int i = 0; i < controls.strip.numPixels(); i++) {
+            controls.strip.setPixelColor(
+                i,
+                wheelColor((i + rainbowPos) & 255)
+            );
+        }
+
+        controls.strip.show();
+    });
+
+    rainbowPos = (rainbowPos + 1) & 255;
+}

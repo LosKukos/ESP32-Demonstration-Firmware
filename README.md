@@ -11,7 +11,6 @@ Repozitář slouží jako příloha k práci a obsahuje zdrojové kódy firmware
 - Menu/ – zdrojové kódy firmware  
 - Obrázky/ – obrázky použité v textu práce  
 - Etická komise/ – dokumenty k posudku
-- Prezentace/ – doprovodná prezentace  
 
 ---
 

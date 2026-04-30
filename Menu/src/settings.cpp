@@ -194,7 +194,7 @@ void Settings::task(void *pvParameters) {
     Settings* self = static_cast<Settings*>(pvParameters);
 
     for (;;) {
-        // Pokud modul neběží, task se uspí
+        // Pokud dojde k ukončení, task se uspí
         if (!self->running) {
             vTaskSuspend(nullptr);
         }

@@ -1,7 +1,5 @@
-#ifndef PPG_H
-#define PPG_H
-
 #pragma once
+
 #include <Arduino.h>
 #include <ArduinoJson.h>
 #include <controls.h>
@@ -14,12 +12,19 @@ public:
 
     explicit PPG(Controls& ctrl, Settings& settingsRef);
 
+    // Inicializace modulu
     void begin();
+
+    // Stav modulu
     bool shouldExit();
     bool isRunning();
-    void calibrateSensor();
-    void registerWebRoutes();
     void requestStop() { _exit = true; }
+
+    // Kalibrace fotosenzoru
+    void calibrateSensor();
+
+    // Webové rozhraní
+    void registerWebRoutes();
 
 private:
     enum MenuItem {
@@ -31,9 +36,12 @@ private:
 
     Controls& controls;
     Settings& settings;
-    static void task(void* pvParameters);
 
+    // FreeRTOS task modulu
+    static void task(void* pvParameters);
     TaskHandle_t taskHandle = nullptr;
+
+    // Sdílená data modulu
     SemaphoreHandle_t dataMutex = nullptr;
     volatile bool _exit = false;
     bool running = false;
@@ -44,7 +52,7 @@ private:
     int menuSelection = 0;
     bool autoZoomEnabled = false;
 
-    // Mereni
+    // Nastavení měření
     static constexpr unsigned long ppgInterval = 20;
     static constexpr unsigned long beatInterval = 300;
     static constexpr int bpmValidMin = 40;
@@ -54,39 +62,47 @@ private:
     static constexpr int intervalBufferSize = 3;
     static constexpr float filterWeight = 0.4f;
 
+    // Výchozí úroveň signálu pro zobrazení
     static constexpr int displayBaselineSampleCount = 150;
     long displayBaselineSum = 0;
     int displayBaselineCounter = 0;
     int displayBaseline = 0;
     bool displayBaselineLocked = false;
 
+    // Hodnoty měřeného signálu
     int ambientBaseline = 0;
     int currentValue = 0;
     unsigned long lastPPGReadTime = 0;
 
+    // Buffer pro vykreslení průběhu signálu
     int ppgBuffer[bufferSize] = {0};
     int bufferIndex = 0;
 
+    // Hodnota EMA filtru
     float emaValue = 0.0f;
 
+    // Detekce tepů a výpočet BPM
     unsigned long intervalBuffer[intervalBufferSize] = {0};
     int intervalIndex = 0;
     unsigned long lastPeakMillis = 0;
     bool signalAboveThreshold = false;
     int adjThreshold = 0;
 
-    // Sdilena data pro web/UI
+    // Sdílené hodnoty pro displej a web
     int currentBPM = 0;
     int lastAcceptedBPM = 0;
     bool bpmIsValid = false;
 
+    // Indikace detekovaného tepu LED diodou
     bool ledOn = false;
     unsigned long lastPeakLedTime = 0;
     static constexpr unsigned long bpmBlinkTime = 50;
 
+    // Rozměry displeje
     static constexpr int DISPLAY_WIDTH = 128;
     static constexpr int DISPLAY_HEIGHT = 64;
 
+    // Položky menu
     static constexpr int menuItemCount = 4;
     const char* menuItems[menuItemCount] = {
         "Kalibrace",
@@ -95,22 +111,33 @@ private:
         "Konec"
     };
 
+    // Reset měření
     void resetMeasurementState();
+
+    // Snímání a zpracování PPG signálu
     void sampleAndProcessPPG();
-    void drawMeasurementScreen(bool fingerOn);
-    void handleStateSwitch();
-    void handleLedSwitch();
+    int readPPG();
+
+    // Detekce tepu a výpočet BPM
     bool detectPeak(int value, int threshold, unsigned long now);
     void calculateBPM(unsigned long interval);
     bool isBpmPlausible(int bpm) const;
-    int readPPG();
+    int calculateDynamicThreshold() const;
+
+    // Ovládání stavu modulu
+    void handleStateSwitch();
+    void handleLedSwitch();
+
+    // Vykreslení na displej
+    void drawMeasurementScreen(bool fingerOn);
     void drawPPGCurve(Adafruit_SH1106G& display);
     void displayBPM(Adafruit_SH1106G& display, bool fingerOn);
-    int calculateDynamicThreshold() const;
     void drawMenu();
+
+    // Indikace tepu LED diodou
     void blinkPeak(bool peak);
+
+    // Uzamčení sdílených dat
     void lockData();
     void unlockData();
 };
-
-#endif

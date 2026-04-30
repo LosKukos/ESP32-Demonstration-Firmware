@@ -16,7 +16,7 @@ const char* const Level::menuItems[Level::menuItemCount] = {
 
 Level::Level(Controls& ctrl, Settings& settingsRef) 
     : controls(ctrl), settings(settingsRef) {
-    // Mutex pro data, který chrání sdílená data při přístupu taskem a webem
+    // Mutex pro sdílená data
     dataMutex = xSemaphoreCreateMutex();
 }
 
@@ -56,7 +56,6 @@ void Level::showSensorError() {
         display.setCursor(10, 44);
         display.println("pripojen");
 
-        display.setCursor((SCREEN_WIDTH - 12 * 6) / 2, 56);
         display.display();
 
         vTaskDelay(pdMS_TO_TICKS(1000));
@@ -66,12 +65,14 @@ void Level::showSensorError() {
 void Level::waitForTouchExit() {
     controls.resetTouchState();
 
+    // Čekání na uvolnění dotykového senzoru
     while (controls.fingerTouched()) {
         vTaskDelay(pdMS_TO_TICKS(20));
     }
 
     controls.resetTouchState();
 
+    // Čekání na potvrzení návratu dotykem
     while (!controls.FingerTouchedFlag()) {
         vTaskDelay(pdMS_TO_TICKS(20));
     }
@@ -90,7 +91,7 @@ void Level::begin() {
     calibrating = false;
     calibIndex = 0;
 
-    // Kontrola připojení senzoru - pokud není, dojde k ukončení
+    // Kontrola připojení senzoru
     if (!checkSensorConnection()) {
         showSensorError();
         waitForTouchExit();
@@ -99,7 +100,7 @@ void Level::begin() {
         return;
     }
 
-    // Pokud task ještě nebyl vytvořen, dojde k vytvoření, poté se jen probouzí
+    // Vytvoření nebo probuzení tasku modulu
     if (taskHandle == nullptr) { 
         taskHandle = xTaskCreateStaticPinnedToCore(
             task,
@@ -131,7 +132,7 @@ void Level::task(void *pvParameters) {
             vTaskSuspend(nullptr);
         }
 
-        // Ukončení modulu a nastavení výchozího stavu 
+        // Ukončení modulu a nastavení výchozího stavu
         if (self->_exit) {
             self->calibrating = false;
             self->menuIndex = 0;
@@ -145,9 +146,11 @@ void Level::task(void *pvParameters) {
         // Stavový automat modulu
         switch (self->currentState) {
             case LOOP:
-            // Výpočet náklonu a vykreslení pozice kuličky
+                // Výpočet náklonu a vykreslení pozice kuličky
                 self->updateTiltEstimate();
-                if (self->_exit) { // Kontrola požadavku na ukončení
+
+                // Kontrola požadavku na ukončení
+                if (self->_exit) {
                     continue;
                 }
 
@@ -167,14 +170,14 @@ void Level::task(void *pvParameters) {
             case CALIBRATION:
                 self->setLevelLed(0, 0, 0);
 
-                // Ke kalibraci dochází jen při vstupu do stavu
+                // Spuštění kalibrace při vstupu do stavu
                 if (!self->calibrating) {
                     self->startCalibration();
                 }
 
                 self->calibrationStep();
 
-                // Po dokončení kalibrace dojde k návratu do hlavní smyčky
+                // Návrat do měření po dokončení kalibrace
                 if (!self->calibrating && !self->_exit) {
                     self->currentState = LOOP;
                 }
@@ -215,7 +218,7 @@ void Level::drawMenu() {
         controls.rightPressed = false;
     }
 
-    // Pokud je detekován dotyk, dojde k výběru
+    // Výběr položky pomocí dotyku
     if (controls.FingerTouchedFlag()) {
         switch (menuIndex) {
             case 0:
@@ -238,7 +241,7 @@ void Level::updateTiltEstimate() {
     Axis accel = readAccel(); 
     Axis gyro = readGyro(); 
 
-    // Odečtení kalibračních hodnot od naměřených
+    // Odečtení kalibračních hodnot od naměřených dat
     const float accelX = accel.x - accelOffset.x; 
     const float accelY = accel.y - accelOffset.y;
     const float gyroX = gyro.x - gyroBias.x;
@@ -255,7 +258,7 @@ void Level::updateTiltEstimate() {
 
     newTilt.z = accel.z - accelOffset.z;
 
-    // Pokud výpočet vrátí neplatnou hodnotu (NaN nebo nekonečno), ověří se stav senzoru
+    // Kontrola neplatných hodnot výpočtu
     if (!isfinite(newTilt.x) || !isfinite(newTilt.y)) {
         if (!checkSensorConnection()) {
             showSensorError();
@@ -266,7 +269,7 @@ void Level::updateTiltEstimate() {
         newTilt = {0.0f, 0.0f, 0.0f};
     }
 
-    // Uložení vypočtených dat
+    // Uložení vypočtených hodnot
     if (lockData(pdMS_TO_TICKS(10))) {
         tiltEstimate = newTilt;
         unlockData();
@@ -288,12 +291,12 @@ Level::Axis Level::readGyro() {
 }
 
 void Level::drawAxesAndZones() { 
-    // Vykreslení os na displeji
     auto& display = controls.display;
 
     const int cx = display.width() / 2;
     const int cy = display.height() / 2;
 
+    // Vykreslení os na displeji
     for (int y = 0; y < display.height(); y += 4) {
         display.drawPixel(cx, y, SH110X_WHITE);
     }
@@ -318,14 +321,13 @@ void Level::updateCenterLedFromPixel(int px, int py) {
     uint8_t green = 0;
     uint8_t blue = 0;
 
-    // Nastavení barev LED podle vzdálenosti kuličky od středu displeje
-    // Pokud je kulička mimo vnější zónu, LED zůstane vypnutá
+    // Kulička mimo středovou oblast
     if (dist >= ledOuterRadiusPx) {
         red = 0;
         green = 0;
         blue = 0;
     }
-    // Pokud je kulička mezi vnitřní a vnější zónou, LED bude červená s intenzitou závislou na vzdálenosti
+    // Přiblížení ke středu je signalizováno červeně
     else if (dist > ledInnerRadiusPx) {
         float t = (ledOuterRadiusPx - dist) / (ledOuterRadiusPx - ledInnerRadiusPx);
         t = constrain(t, 0.0f, 1.0f);
@@ -335,7 +337,7 @@ void Level::updateCenterLedFromPixel(int px, int py) {
         green = 0;
         blue = 0;
     }
-    // Pokud je kulička uvnitř vnitřní zóny, LED bude zelená
+    // Vycentrovaná poloha je signalizována zeleně
     else {
         float t = dist / ledInnerRadiusPx;
         t = constrain(t, 0.0f, 1.0f);
@@ -360,11 +362,11 @@ void Level::drawBall(const Axis& tilt) {
     controls.mutexDisplay([&]() {
         auto& display = controls.display;
 
-        // Mapování vypočtených hodnot na pozici kuličky na displeji
+        // Mapování vypočtených hodnot na pozici kuličky
         long mappedX = map(static_cast<long>(tilt.x), -displayInputRange, displayInputRange, 0, display.width() - 1);
         long mappedY = map(static_cast<long>(tilt.y), -displayInputRange, displayInputRange, 0, display.height() - 1);
 
-        // Ořezání pozice kuličky, aby se vešla na displej a nezobrazovala se mimo něj
+        // Omezení pozice kuličky na plochu displeje
         const int px = constrain(static_cast<int>(mappedX), ballRadius, display.width() - 1 - ballRadius);
         const int py = constrain(static_cast<int>(mappedY), ballRadius, display.height() - 1 - ballRadius);
 
@@ -492,7 +494,7 @@ void Level::startCalibration() {
 }
 
 void Level::calibrationStep() {
-    // Pokud dojde k chybě senzoru během kalibrace, dojde k ukončení
+    // Kontrola senzoru během kalibrace
     if (!checkSensorConnection()) {
         showSensorError();
         calibrating = false;
@@ -500,7 +502,7 @@ void Level::calibrationStep() {
         return;
     }
 
-    // Sběr vzorků pro výpočet kalibračních hodnot    
+    // Sběr vzorků pro výpočet kalibračních hodnot
     if (calibIndex < calibrationSampleCount) {
         const Axis accel = readAccel();
         const Axis gyro = readGyro();
@@ -526,7 +528,7 @@ void Level::calibrationStep() {
         return;
     }
 
-    // Výpočet kalibračních hodnot jako průměru z nasbíraných vzorků
+    // Výpočet kalibračních hodnot jako průměru ze vzorků
     accelOffset.x = accelSum.x / calibrationSampleCount;
     accelOffset.y = accelSum.y / calibrationSampleCount;
     accelOffset.z = accelSum.z / calibrationSampleCount;
@@ -544,7 +546,7 @@ void Level::calibrationStep() {
         calibrating = false;
     }
 
-    // Zobrazení informace o dokončení kalibrace
+    // Zobrazení dokončení kalibrace
     controls.mutexDisplay([&]() {
         auto& display = controls.display;
 
@@ -577,6 +579,7 @@ void Level::calibrate() {
 
     while (calibrating) {
         calibrationStep();
+
         if (_exit) {
             break;
         }

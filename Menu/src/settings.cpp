@@ -3,9 +3,10 @@
 BluetoothSerial SerialBT;
 
 namespace {
-constexpr uint32_t SETTINGS_TASK_STACK_WORDS = 2048;
-StaticTask_t settingsTaskBuffer;
-StackType_t settingsTaskStack[SETTINGS_TASK_STACK_WORDS];
+    // Statická paměť pro FreeRTOS task modulu
+    constexpr uint32_t SETTINGS_TASK_STACK_WORDS = 2048;
+    StaticTask_t settingsTaskBuffer;
+    StackType_t settingsTaskStack[SETTINGS_TASK_STACK_WORDS];
 }
 
 Settings::Settings(Controls& controlsRef)
@@ -16,6 +17,7 @@ AsyncWebServer& Settings::server() {
 }
 
 void Settings::webStart() {
+    // Spuštění webserveru pouze pokud ještě neběží
     if (!webServerStarted) {
         _server.begin();
         webServerStarted = true;
@@ -23,11 +25,10 @@ void Settings::webStart() {
 }
 
 void Settings::wifiStartup() {
+    // Spuštění WiFi přístupového bodu
     WiFi.mode(WIFI_AP);
     WiFi.softAP(wifi_ssid_runtime.length() ? wifi_ssid_runtime.c_str() : WIFI_default);
     WiFi.setSleep(false);
-
-    IPAddress ip = WiFi.softAPIP();
 }
 
 void Settings::startBluetooth() {
@@ -35,6 +36,7 @@ void Settings::startBluetooth() {
         return;
     }
 
+    // Před spuštěním Bluetooth se vypne WiFi a webserver
     stopWifiWeb();
     delay(300);
 
@@ -45,6 +47,7 @@ void Settings::startBluetooth() {
 }
 
 void Settings::stopBluetooth() {
+    // Vypnutí Bluetooth komunikace
     SerialBT.end();
     delay(200);
 
@@ -56,6 +59,7 @@ void Settings::startWifiWeb() {
         return;
     }
 
+    // Před spuštěním WiFi se vypne Bluetooth
     stopBluetooth();
     delay(300);
 
@@ -68,6 +72,7 @@ void Settings::startWifiWeb() {
 }
 
 void Settings::stopWifiWeb() {
+    // Vypnutí webserveru a WiFi přístupového bodu
     if (webServerStarted) {
         _server.end();
         webServerStarted = false;
@@ -85,6 +90,7 @@ void Settings::switchConnectivity(ConnectivityMode newMode) {
         return;
     }
 
+    // Přepnutí mezi Bluetooth a WiFi režimem
     switch (newMode) {
         case ConnectivityMode::BT:
             startBluetooth();
@@ -97,17 +103,20 @@ void Settings::switchConnectivity(ConnectivityMode newMode) {
 }
 
 void Settings::init() {
+    // Výchozí nastavení komunikačního režimu
     currentConnectivityMode = ConnectivityMode::BT;
     webServerStarted = false;
 }
 
 void Settings::begin() {
+    // Reset stavu modulu
     _exit = false;
     running = true;
     state = MENU;
     selected = 0;
     firstVisibleItem = 0;
 
+    // Vytvoření nebo probuzení tasku modulu
     if (taskHandle == nullptr) {
         taskHandle = xTaskCreateStaticPinnedToCore(
             task,
@@ -130,6 +139,7 @@ void Settings::begin() {
 }
 
 String Settings::readSerialLine() {
+    // Čtení vstupu ze sériové linky nebo Bluetooth
     if (Serial.available()) return Serial.readStringUntil('\n');
     if (SerialBT.available()) return SerialBT.readStringUntil('\n');
     return "";
@@ -160,6 +170,7 @@ void Settings::drawMenu() {
 }
 
 void Settings::updateMenuSelection(int direction) {
+    // Posun výběru v menu
     selected = (selected + direction + menuLength) % menuLength;
 
     if (selected < firstVisibleItem) {
@@ -183,10 +194,12 @@ void Settings::task(void *pvParameters) {
     Settings* self = static_cast<Settings*>(pvParameters);
 
     for (;;) {
+        // Pokud modul neběží, task se uspí
         if (!self->running) {
             vTaskSuspend(nullptr);
         }
 
+        // Ukončení modulu a návrat komunikace do WiFi režimu
         if (self->_exit) {
             self->state = MENU;
             self->selected = 0;
@@ -197,6 +210,7 @@ void Settings::task(void *pvParameters) {
             continue;
         }
 
+        // Stavový automat modulu
         switch (self->state) {
             case MENU:
                 self->drawMenu();
@@ -327,6 +341,7 @@ void Settings::drawBTRead() {
         controls.display.display();
     });
 
+    // Uložení nového Bluetooth názvu
     String input = readSerialLine();
     if (input.length()) {
         bt_name_runtime = input;
@@ -345,6 +360,7 @@ void Settings::drawBTConfirm() {
     if (controls.rightPressed) {
         controls.rightPressed = false;
 
+        // Potvrzení a spuštění Bluetooth s novým názvem
         switchConnectivity(ConnectivityMode::BT);
 
         state = MENU;
@@ -398,6 +414,7 @@ void Settings::drawWiFiSSIDRead() {
         controls.display.display();
     });
 
+    // Uložení nového názvu WiFi sítě
     String input = readSerialLine();
     input.trim();
 
@@ -418,6 +435,7 @@ void Settings::drawWiFiConfirm() {
     if (controls.rightPressed) {
         controls.rightPressed = false;
 
+        // Potvrzení a spuštění WiFi s novým SSID
         switchConnectivity(ConnectivityMode::WIFI);
 
         controls.mutexDisplay([&]() {
@@ -467,14 +485,18 @@ void Settings::drawWiFiConfirm() {
 }
 
 uint32_t Settings::wheelColor(byte wheelPos) {
+    // Přepočet pozice na barvu pro animaci LED
     wheelPos = 255 - wheelPos;
+
     if (wheelPos < 85) {
         return controls.strip.Color(255 - wheelPos * 3, 0, wheelPos * 3);
     }
+
     if (wheelPos < 170) {
         wheelPos -= 85;
         return controls.strip.Color(0, wheelPos * 3, 255 - wheelPos * 3);
     }
+
     wheelPos -= 170;
     return controls.strip.Color(wheelPos * 3, 255 - wheelPos * 3, 0);
 }
@@ -547,6 +569,7 @@ void Settings::drawDebug() {
         controls.display.display();
     });
 
+    // Čtení příkazu ze sériové linky nebo Bluetooth
     String input = readSerialLine();
     input.trim();
 
@@ -559,12 +582,15 @@ void Settings::drawDebug() {
         SerialBT.println("> " + input);
     }
 
+    // Výpis dostupných debug příkazů
     if (input.equalsIgnoreCase("help")) {
         Serial.println("Prikazy: help, heap, fs, flash, runtime, touch, reset, exit");
         if (SerialBT.hasClient()) {
             SerialBT.println("Prikazy: help, heap, fs, flash, runtime, touch, reset, exit");
         }
     }
+
+    // Informace o využití paměti
     else if (input.equalsIgnoreCase("heap")) {
         uint32_t freeHeap = ESP.getFreeHeap();
         uint32_t minHeap = ESP.getMinFreeHeap();
@@ -582,6 +608,8 @@ void Settings::drawDebug() {
             SerialBT.println("Fragmentation: max alloc " + String(maxAlloc) + " B (bigger = better)");
         }
     }
+
+    // Informace o souborovém systému
     else if (input.equalsIgnoreCase("fs")) {
         uint32_t total = LittleFS.totalBytes();
         uint32_t used = LittleFS.usedBytes();
@@ -599,6 +627,8 @@ void Settings::drawDebug() {
             SerialBT.println("Free: " + String(free) + " B");
         }
     }
+
+    // Informace o velikosti firmware a flash paměti
     else if (input.equalsIgnoreCase("flash")) {
         uint32_t flashSize = ESP.getFlashChipSize();
         uint32_t sketchSize = ESP.getSketchSize();
@@ -622,6 +652,8 @@ void Settings::drawDebug() {
             SerialBT.println("Free space: " + String(freeKB) + " kB");
         }
     }
+
+    // Výpis doby běhu zařízení
     else if (input.equalsIgnoreCase("runtime")) {
         uint32_t totalSeconds = millis() / 1000;
 
@@ -639,6 +671,8 @@ void Settings::drawDebug() {
             SerialBT.println(line);
         }
     }
+
+    // Rekalibrace kapacitního senzoru
     else if (input.equalsIgnoreCase("touch")) {
         controls.calibrateTouch();
         controls.resetTouchState();
@@ -648,6 +682,8 @@ void Settings::drawDebug() {
             SerialBT.println("Touch recalibrated");
         }
     }
+
+    // Restart zařízení
     else if (input.equalsIgnoreCase("reset")) {
         Serial.println("Restarting...");
         if (SerialBT.hasClient()) {
@@ -657,6 +693,8 @@ void Settings::drawDebug() {
         delay(200);
         ESP.restart();
     }
+
+    // Ukončení debug režimu
     else if (input.equalsIgnoreCase("exit")) {
         Serial.println("Opoustim debug");
         if (SerialBT.hasClient()) {
@@ -666,6 +704,8 @@ void Settings::drawDebug() {
         state = MENU;
         drawMenu();
     }
+
+    // Neznámý příkaz
     else {
         Serial.println("Neznamy prikaz. Zadej help");
         if (SerialBT.hasClient()) {
@@ -679,10 +719,13 @@ bool Settings::isRunning() {
 }
 
 void Settings::updateRainbow() {
-    if (millis() - lastRainbowTime < 50) return;
+    if (millis() - lastRainbowTime < 50) {
+        return;
+    }
 
     lastRainbowTime = millis();
 
+    // Animace adresovatelné LED v menu nastavení
     controls.mutexLed([&]() {
         for (int i = 0; i < controls.strip.numPixels(); i++) {
             controls.strip.setPixelColor(

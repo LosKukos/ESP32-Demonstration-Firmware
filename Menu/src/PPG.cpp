@@ -1,18 +1,21 @@
 #include "PPG.h"
 
 namespace {
-constexpr uint32_t PPG_TASK_STACK_WORDS = 2048;
-StaticTask_t ppgTaskBuffer;
-StackType_t ppgTaskStack[PPG_TASK_STACK_WORDS];
+    // Statická paměť pro FreeRTOS task modulu
+    constexpr uint32_t PPG_TASK_STACK_WORDS = 2048;
+    StaticTask_t ppgTaskBuffer;
+    StackType_t ppgTaskStack[PPG_TASK_STACK_WORDS];
 }
 
 PPG::PPG(Controls& ctrl, Settings& settingsRef)
     : controls(ctrl), settings(settingsRef) {
+    // Mutex pro sdílená data modulu
     dataMutex = xSemaphoreCreateMutex();
     resetMeasurementState();
 }
 
 void PPG::resetMeasurementState() {
+    // Reset proměnných měření
     ambientBaseline = 0;
     currentValue = 0;
     lastPPGReadTime = 0;
@@ -37,11 +40,13 @@ void PPG::resetMeasurementState() {
 }
 
 void PPG::begin() {
+    // Nastavení výchozího stavu modulu
     _exit = false;
     running = true;
     currentState = MEASURING;
     menuSelection = 0;
     currentMode = IR;
+
     controls.mutexLed([&]() {
         controls.strip.setPixelColor(0, 0, 0, 0);
         controls.strip.show();
@@ -51,6 +56,7 @@ void PPG::begin() {
     digitalWrite(controls.RED_LED_PIN, LOW);
     resetMeasurementState();
 
+    // Vytvoření nebo probuzení tasku modulu
     if (taskHandle == nullptr) {
         taskHandle = xTaskCreateStaticPinnedToCore(
             task,
@@ -76,10 +82,12 @@ void PPG::task(void* pvParameters) {
     PPG* self = static_cast<PPG*>(pvParameters);
 
     for (;;) {
+        // Pokud modul neběží, task se uspí
         if (!self->running) {
             vTaskSuspend(nullptr);
         }
 
+        // Ukončení modulu a vypnutí optických LED
         if (self->_exit) {
             digitalWrite(self->controls.IR_LED_PIN, LOW);
             digitalWrite(self->controls.RED_LED_PIN, LOW);
@@ -95,6 +103,7 @@ void PPG::task(void* pvParameters) {
             continue;
         }
 
+        // Stavový automat modulu
         switch (self->currentState) {
             case MEASURING:
                 self->handleLedSwitch();
@@ -119,6 +128,8 @@ void PPG::task(void* pvParameters) {
 
 void PPG::sampleAndProcessPPG() {
     const unsigned long now = millis();
+
+    // Omezení periody čtení PPG signálu
     if (now - lastPPGReadTime < ppgInterval) {
         return;
     }
@@ -128,11 +139,13 @@ void PPG::sampleAndProcessPPG() {
     bool peakDetected = false;
 
     if (fingerOn) {
+        // Načtení signálu a vyhlazení pomocí EMA filtru
         const int rawValue = readPPG();
 
         emaValue = filterWeight * rawValue + (1.0f - filterWeight) * emaValue;
         currentValue = static_cast<int>(round(emaValue));
 
+        // Určení výchozí úrovně signálu pro zobrazení
         if (!displayBaselineLocked) {
             displayBaselineSum += currentValue;
             displayBaselineCounter++;
@@ -143,9 +156,11 @@ void PPG::sampleAndProcessPPG() {
             }
         }
 
+        // Uložení hodnoty do kruhového bufferu
         ppgBuffer[bufferIndex] = currentValue;
         bufferIndex = (bufferIndex + 1) % bufferSize;
 
+        // Výpočet dynamického prahu a detekce tepu
         adjThreshold = calculateDynamicThreshold();
         peakDetected = detectPeak(currentValue, adjThreshold, now);
         if (peakDetected) {
@@ -153,6 +168,7 @@ void PPG::sampleAndProcessPPG() {
         }
 
     } else {
+        // Reset měření při odebrání prstu
         signalAboveThreshold = false;
         lastPeakMillis = 0;
         currentValue = 0;
@@ -189,10 +205,12 @@ void PPG::drawMeasurementScreen(bool fingerOn) {
 bool PPG::detectPeak(int value, int threshold, unsigned long now) {
     bool peakDetected = false;
 
+    // Detekce překročení dynamického prahu
     if (!signalAboveThreshold && value > threshold) {
         signalAboveThreshold = true;
     }
 
+    // Detekce sestupné hrany po překročení prahu
     if (signalAboveThreshold && value < threshold) {
         const unsigned long interval = now - lastPeakMillis;
         if (lastPeakMillis != 0 && interval >= beatInterval) {
@@ -207,6 +225,7 @@ bool PPG::detectPeak(int value, int threshold, unsigned long now) {
 }
 
 void PPG::handleStateSwitch() {
+    // Vstup do menu během měření
     if (currentState == MEASURING && controls.rightPressed) {
         currentState = MENU;
         menuSelection = 0;
@@ -219,6 +238,7 @@ void PPG::handleStateSwitch() {
         return;
     }
 
+    // Pohyb v menu modulu
     if (controls.leftPressed) {
         menuSelection = (menuSelection - 1 + menuItemCount) % menuItemCount;
         controls.leftPressed = false;
@@ -235,6 +255,7 @@ void PPG::handleStateSwitch() {
         return;
     }
 
+    // Výběr položky menu
     switch (menuSelection) {
         case MENU_CALIBRATION:
             currentState = CALIBRATION;
@@ -256,6 +277,7 @@ void PPG::handleStateSwitch() {
 }
 
 void PPG::handleLedSwitch() {
+    // Přepnutí mezi IR a RED režimem
     if (controls.leftPressed) {
         currentMode = (currentMode == IR) ? RED : IR;
         controls.leftPressed = false;
@@ -268,11 +290,14 @@ void PPG::handleLedSwitch() {
 void PPG::calculateBPM(unsigned long interval) {
     lockData();
 
+    // Uložení intervalu mezi tepy
     intervalBuffer[intervalIndex] = interval;
     intervalIndex = (intervalIndex + 1) % intervalBufferSize;
 
     unsigned long sum = 0;
     int count = 0;
+
+    // Výpočet průměrného intervalu
     for (int i = 0; i < intervalBufferSize; ++i) {
         if (intervalBuffer[i] > 0) {
             sum += intervalBuffer[i];
@@ -296,6 +321,7 @@ void PPG::calculateBPM(unsigned long interval) {
 }
 
 bool PPG::isBpmPlausible(int bpm) const {
+    // Kontrola fyziologicky očekávaného rozsahu BPM
     if (bpm < bpmValidMin || bpm > bpmValidMax) {
         return false;
     }
@@ -308,6 +334,7 @@ bool PPG::isBpmPlausible(int bpm) const {
 }
 
 void PPG::calibrateSensor() {
+    // Vypnutí optických LED během kalibrace
     digitalWrite(controls.IR_LED_PIN, LOW);
     digitalWrite(controls.RED_LED_PIN, LOW);
     vTaskDelay(pdMS_TO_TICKS(300));
@@ -315,6 +342,7 @@ void PPG::calibrateSensor() {
     constexpr int totalSamples = 100;
     long sum = 0;
 
+    // Sběr vzorků výchozí úrovně fotosenzoru
     for (int i = 0; i < totalSamples; ++i) {
         sum += analogRead(controls.PPG_PIN);
 
@@ -343,6 +371,7 @@ void PPG::calibrateSensor() {
         vTaskDelay(pdMS_TO_TICKS(20));
     }
 
+    // Uložení výchozí hodnoty fotosenzoru
     resetMeasurementState();
     ambientBaseline = sum / totalSamples;
     if (currentMode != RED) {
@@ -372,7 +401,6 @@ void PPG::calibrateSensor() {
 
 int PPG::readPPG() {
     return analogRead(controls.PPG_PIN) - ambientBaseline;
-
 }
 
 void PPG::drawPPGCurve(Adafruit_SH1106G& display) {
@@ -396,6 +424,7 @@ void PPG::drawPPGCurve(Adafruit_SH1106G& display) {
     int maxVal = ppgBuffer[baseIdx];
     long sum = 0;
 
+    // Nalezení minima a maxima v aktuálním okně signálu
     for (int i = 0; i < windowSize; ++i) {
         const int idx = (baseIdx + i) % bufferSize;
         const int val = ppgBuffer[idx];
@@ -408,6 +437,7 @@ void PPG::drawPPGCurve(Adafruit_SH1106G& display) {
     float displayMin = 0.0f;
     float displayMax = 0.0f;
 
+    // Nastavení rozsahu vykreslení
     if (autoZoomEnabled) {
         displayMin = static_cast<float>(minVal);
         displayMax = static_cast<float>(maxVal);
@@ -426,6 +456,7 @@ void PPG::drawPPGCurve(Adafruit_SH1106G& display) {
 
     const float xStep = static_cast<float>(DISPLAY_WIDTH - 1) / static_cast<float>(windowSize - 1);
 
+    // Vykreslení průběhu signálu
     for (int i = 1; i < windowSize; ++i) {
         const int prevIndex = (baseIdx + i - 1) % bufferSize;
         const int currIndex = (baseIdx + i) % bufferSize;
@@ -459,6 +490,7 @@ void PPG::displayBPM(Adafruit_SH1106G& display, bool fingerOn) {
     int bpmToShow = 0;
     bool valid = false;
 
+    // Načtení aktuální hodnoty BPM
     lockData();
     bpmToShow = currentBPM;
     valid = bpmIsValid;
@@ -487,6 +519,7 @@ int PPG::calculateDynamicThreshold() const {
     int maxVal = ppgBuffer[(bufferIndex - 1 + bufferSize) % bufferSize];
     int minVal = maxVal;
 
+    // Výpočet minima a maxima z posledních vzorků
     for (int i = 0; i < window; ++i) {
         const int idx = (bufferIndex - 1 - i + bufferSize) % bufferSize;
         const int val = ppgBuffer[idx];
@@ -510,6 +543,7 @@ void PPG::drawMenu() {
         display.setCursor((DISPLAY_WIDTH - 8 * 10) / 2, 0);
         display.println("NASTAVENI");
 
+        // Vykreslení položek menu
         for (int i = 0; i < menuItemCount; ++i) {
             const int y = 20 + i * 12;
 
@@ -530,6 +564,7 @@ void PPG::drawMenu() {
 void PPG::blinkPeak(bool peak) {
     const unsigned long now = millis();
 
+    // Rozsvícení LED při detekovaném tepu
     if (peak && !ledOn) {
         controls.mutexLed([&]() {
             controls.strip.setPixelColor(0, 0, 255, 0);
@@ -540,6 +575,7 @@ void PPG::blinkPeak(bool peak) {
         return;
     }
 
+    // Zhasnutí LED po krátkém intervalu
     if (ledOn && now - lastPeakLedTime >= bpmBlinkTime) {
         controls.mutexLed([&]() {
             controls.strip.setPixelColor(0, 0, 0, 0);
@@ -558,6 +594,7 @@ bool PPG::isRunning() {
 }
 
 void PPG::registerWebRoutes() {
+    // Vrácení aktuálních dat pro webové rozhraní
     settings.server().on("/ppg/update", HTTP_GET, [this](AsyncWebServerRequest* request) {
         if (_exit) {
             request->send(503, "application/json", "{}");
@@ -579,21 +616,25 @@ void PPG::registerWebRoutes() {
         request->send(response);
     });
 
+    // Přepnutí režimu LED z webového rozhraní
     settings.server().on("/ppg/toggle-led", HTTP_GET, [this](AsyncWebServerRequest* request) {
         currentMode = (currentMode == IR) ? RED : IR;
         request->send(200, "text/plain", "ok");
     });
 
+    // Přepnutí automatického měřítka z webového rozhraní
     settings.server().on("/ppg/autozoom", HTTP_GET, [this](AsyncWebServerRequest* request) {
         autoZoomEnabled = !autoZoomEnabled;
         request->send(200, "text/plain", "ok");
     });
 
+    // Spuštění kalibrace z webového rozhraní
     settings.server().on("/ppg/calibrate", HTTP_GET, [this](AsyncWebServerRequest* request) {
         currentState = CALIBRATION;
         request->send(200, "text/plain", "ok");
     });
 
+    // Ukončení modulu z webového rozhraní
     settings.server().on("/ppg/exit", HTTP_GET, [this](AsyncWebServerRequest* request) {
         _exit = true;
         request->send(200, "text/plain", "ok");

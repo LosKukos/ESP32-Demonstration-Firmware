@@ -1,21 +1,25 @@
 #include <RGBMENU.h>
 
 namespace {
-constexpr uint32_t RGB_TASK_STACK_WORDS = 3072;
-StaticTask_t rgbTaskBuffer;
-StackType_t rgbTaskStack[RGB_TASK_STACK_WORDS];
+    // Statická paměť pro FreeRTOS task modulu
+    constexpr uint32_t RGB_TASK_STACK_WORDS = 3072;
+    StaticTask_t rgbTaskBuffer;
+    StackType_t rgbTaskStack[RGB_TASK_STACK_WORDS];
 }
 
 RGBMenu::RGBMenu(Controls& ctrl, Settings& settingsRef)
     : controls(ctrl), settings(settingsRef) {
+    // Mutex pro sdílená data modulu
     dataMutex = xSemaphoreCreateMutex();
 }
 
 void RGBMenu::begin() {
+    // Reset stavu modulu a zhasnutí LED diody
     resetState(false);
     running = true;
     applyLedColor(0, 0, 0);
 
+    // Vytvoření nebo probuzení tasku modulu
     if (taskHandle == nullptr) {
         taskHandle = xTaskCreateStaticPinnedToCore(
             task,
@@ -53,6 +57,7 @@ bool RGBMenu::isRunning() {
 }
 
 void RGBMenu::requestStop() {
+    // Požadavek na ukončení modulu
     if (xSemaphoreTake(dataMutex, pdMS_TO_TICKS(10)) == pdTRUE) {
         state.exitRequested = true;
         state.dirty = true;
@@ -61,6 +66,7 @@ void RGBMenu::requestStop() {
 }
 
 void RGBMenu::resetState(bool requestExit) {
+    // Nastavení výchozího stavu modulu
     if (xSemaphoreTake(dataMutex, pdMS_TO_TICKS(10)) == pdTRUE) {
         state.rgb[0] = 0;
         state.rgb[1] = 0;
@@ -76,6 +82,7 @@ void RGBMenu::resetState(bool requestExit) {
 RGBMenu::State RGBMenu::copyState() {
     State snapshot{};
 
+    // Vytvoření kopie aktuálního stavu
     if (xSemaphoreTake(dataMutex, pdMS_TO_TICKS(10)) == pdTRUE) {
         snapshot = state;
         xSemaphoreGive(dataMutex);
@@ -89,14 +96,19 @@ void RGBMenu::handleTouch() {
         return;
     }
 
+    // Přepnutí mezi výběrem položky a úpravou hodnoty
     if (state.currentItem < 3) {
         state.adjustingValue = !state.adjustingValue;
-    } else if (state.currentItem == 3) {
+    } 
+    // Reset barevných složek
+    else if (state.currentItem == 3) {
         state.rgb[0] = 0;
         state.rgb[1] = 0;
         state.rgb[2] = 0;
         state.adjustingValue = false;
-    } else {
+    } 
+    // Ukončení modulu
+    else {
         state.rgb[0] = 0;
         state.rgb[1] = 0;
         state.rgb[2] = 0;
@@ -109,6 +121,7 @@ void RGBMenu::handleTouch() {
 }
 
 void RGBMenu::applyLedColor(uint8_t r, uint8_t g, uint8_t b) {
+    // Nastavení barvy adresovatelné LED diody
     controls.mutexLed([&]() {
         controls.strip.setPixelColor(0, r, g, b);
         controls.strip.show();
@@ -120,16 +133,19 @@ void RGBMenu::task(void* pvParameters) {
     uint8_t lastApplied[3] = {255, 255, 255};
 
     for (;;) {
+        // Pokud modul neběží, task se uspí
         if (!self->running) {
             vTaskSuspend(nullptr);
         }
 
+        // Zpracování dotykového senzoru
         if (self->controls.FingerTouchedFlag()) {
             self->handleTouch();
         }
 
         if (xSemaphoreTake(self->dataMutex, pdMS_TO_TICKS(10)) == pdTRUE) {
             if (!self->state.adjustingValue) {
+                // Pohyb mezi položkami menu
                 if (self->controls.leftPressed) {
                     self->controls.leftPressed = false;
                     self->state.currentItem = (self->state.currentItem + self->menuLength - 1) % self->menuLength;
@@ -142,6 +158,7 @@ void RGBMenu::task(void* pvParameters) {
                     self->state.dirty = true;
                 }
             } else {
+                // Úprava hodnoty vybrané barevné složky
                 if (self->controls.leftPressed) {
                     self->controls.leftPressed = false;
                     uint16_t value = self->state.rgb[self->state.currentItem] + 10;
@@ -163,6 +180,7 @@ void RGBMenu::task(void* pvParameters) {
             self->state.dirty = false;
             xSemaphoreGive(self->dataMutex);
 
+            // Aktualizace LED a displeje při změně stavu
             if (dirty) {
                 if (snapshot.rgb[0] != lastApplied[0] ||
                     snapshot.rgb[1] != lastApplied[1] ||
@@ -176,6 +194,7 @@ void RGBMenu::task(void* pvParameters) {
                 self->drawMenu(snapshot);
             }
 
+            // Ukončení modulu
             if (exitRequested) {
                 self->applyLedColor(0, 0, 0);
                 lastApplied[0] = 0;
@@ -213,6 +232,7 @@ void RGBMenu::drawMenu(const State& snapshot) {
         const int yOffset = 2;
         const int spacing = 10;
 
+        // Vykreslení barevných složek a položek menu
         for (int i = 0; i < menuLength; i++) {
             if (i < 3) {
                 drawSlider(5, yOffset + i * spacing, 80, 8, snapshot.rgb[i], menuItems[i], i == snapshot.currentItem);
@@ -225,6 +245,7 @@ void RGBMenu::drawMenu(const State& snapshot) {
             }
         }
 
+        // Zobrazení výsledné barvy v hexadecimálním formátu
         controls.display.setCursor(5, yOffset + 3 * spacing);
         char hexColor[7];
         snprintf(hexColor, sizeof(hexColor), "%02X%02X%02X", snapshot.rgb[0], snapshot.rgb[1], snapshot.rgb[2]);
@@ -241,6 +262,7 @@ void RGBMenu::registerWebRoutes() {
     }
     webRoutesRegistered = true;
 
+    // Aktualizace hodnot barevných složek z webového rozhraní
     settings.server().on("/rgb/update", HTTP_GET, [this](AsyncWebServerRequest* request) {
         bool updated = false;
 
@@ -271,6 +293,7 @@ void RGBMenu::registerWebRoutes() {
         request->send(200, "text/plain", updated ? "ok" : "nochange");
     });
 
+    // Reset barevných složek z webového rozhraní
     settings.server().on("/rgb/reset", HTTP_GET, [this](AsyncWebServerRequest* request) {
         if (xSemaphoreTake(dataMutex, pdMS_TO_TICKS(10)) == pdTRUE) {
             state.rgb[0] = 0;
@@ -284,6 +307,7 @@ void RGBMenu::registerWebRoutes() {
         request->send(200, "text/plain", "ok");
     });
 
+    // Ukončení modulu z webového rozhraní
     settings.server().on("/rgb/exit", HTTP_GET, [this](AsyncWebServerRequest* request) {
         if (xSemaphoreTake(dataMutex, pdMS_TO_TICKS(10)) == pdTRUE) {
             state.rgb[0] = 0;
@@ -298,6 +322,7 @@ void RGBMenu::registerWebRoutes() {
         request->send(200, "text/plain", "ok");
     });
 
+    // Vrácení aktuálního stavu modulu pro webové rozhraní
     settings.server().on("/rgb/state", HTTP_GET, [this](AsyncWebServerRequest* request) {
         State snapshot = copyState();
 

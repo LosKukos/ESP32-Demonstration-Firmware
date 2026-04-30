@@ -4,17 +4,20 @@
 #include <cstring>
 
 namespace {
-constexpr uint32_t SNAKE_TASK_STACK_WORDS = 2048;
-StaticTask_t snakeTaskBuffer;
-StackType_t snakeTaskStack[SNAKE_TASK_STACK_WORDS];
+    // Statická paměť pro FreeRTOS task modulu
+    constexpr uint32_t SNAKE_TASK_STACK_WORDS = 2048;
+    StaticTask_t snakeTaskBuffer;
+    StackType_t snakeTaskStack[SNAKE_TASK_STACK_WORDS];
 }
 
+// Položky menu modulu
 const char* const SnakeLib::MENU_ITEMS[SnakeLib::MENU_ITEM_COUNT] = {
     "Start",
     "Nastaveni",
     "Konec"
 };
 
+// Dostupné úrovně obtížnosti
 const char* const SnakeLib::DIFFICULTY_LEVELS[SnakeLib::DIFFICULTY_COUNT] = {
     "Lehka",
     "Stredni",
@@ -22,6 +25,7 @@ const char* const SnakeLib::DIFFICULTY_LEVELS[SnakeLib::DIFFICULTY_COUNT] = {
     "Chaos"
 };
 
+// Rychlosti hry podle obtížnosti
 const int SnakeLib::DIFFICULTY_SPEEDS[SnakeLib::DIFFICULTY_COUNT] = {
     200,
     150,
@@ -31,6 +35,7 @@ const int SnakeLib::DIFFICULTY_SPEEDS[SnakeLib::DIFFICULTY_COUNT] = {
 
 SnakeLib::SnakeLib(Controls& ctrl, Settings& settingsRef)
     : controls(ctrl), settings(settingsRef) {
+    // Mutex pro sdílená data modulu
     dataMutex = xSemaphoreCreateMutex();
 }
 
@@ -45,6 +50,7 @@ void SnakeLib::unlockData() {
 }
 
 void SnakeLib::begin() {
+    // Reset stavu modulu
     if (lockData()) {
         _exit = false;
         running = true;
@@ -60,6 +66,7 @@ void SnakeLib::begin() {
         running = true;
     }
 
+    // Vytvoření nebo probuzení tasku modulu
     if (taskHandle == nullptr) {
         loadLeaderboard();
         taskHandle = xTaskCreateStaticPinnedToCore(
@@ -86,10 +93,12 @@ void SnakeLib::task(void *pvParameters) {
     SnakeLib* self = static_cast<SnakeLib*>(pvParameters);
 
     for (;;) {
+        // Pokud modul neběží, task se uspí
         if (!self->running) {
             vTaskSuspend(nullptr);
         }
 
+        // Ukončení modulu a vypnutí bzučáku
         if (self->_exit) {
             digitalWrite(self->controls.BUZZER_PIN, LOW);
 
@@ -104,6 +113,7 @@ void SnakeLib::task(void *pvParameters) {
             continue;
         }
 
+        // Zpracování vstupů
         if (self->controls.FingerTouchedFlag()) {
             self->handleTouchConfirm();
         }
@@ -114,6 +124,7 @@ void SnakeLib::task(void *pvParameters) {
 
         self->updateBuzzer();
 
+        // Stavový automat modulu
         switch (self->_gameState) {
             case MENU:
                 self->drawMenu();
@@ -138,6 +149,7 @@ void SnakeLib::task(void *pvParameters) {
 }
 
 void SnakeLib::runGameLogic() {
+    // Nastavení rychlosti podle zvolené obtížnosti
     _gameSpeed = (_difficultyIndex == 3) ? currentChaosSpeed() : DIFFICULTY_SPEEDS[_difficultyIndex];
 
     const unsigned long now = millis();
@@ -147,19 +159,23 @@ void SnakeLib::runGameLogic() {
 
     _lastMoveTime = now;
 
+    // Posun těla hada
     for (int i = _snakeLength - 1; i > 0; --i) {
         _snake[i] = _snake[i - 1];
     }
 
+    // Posun hlavy hada
     _snake[0].x += _dirX;
     _snake[0].y += _dirY;
 
+    // Kontrola nárazu do stěny
     if (_snake[0].x < GRID_MIN_X || _snake[0].x > GRID_MAX_X ||
         _snake[0].y < GRID_MIN_Y || _snake[0].y > GRID_MAX_Y) {
         gameOver();
         return;
     }
 
+    // Kontrola nárazu do těla hada
     for (int i = 1; i < _snakeLength; ++i) {
         if (_snake[0].x == _snake[i].x && _snake[0].y == _snake[i].y) {
             gameOver();
@@ -167,6 +183,7 @@ void SnakeLib::runGameLogic() {
         }
     }
 
+    // Zpracování sebrání ovoce
     if (_snake[0].x == _fruit.x && _snake[0].y == _fruit.y) {
         if (_snakeLength < MAX_SNAKE_LENGTH) {
             ++_snakeLength;
@@ -239,6 +256,7 @@ void SnakeLib::drawGame() {
 
         controls.display.drawRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, SH110X_WHITE);
 
+        // Vykreslení hada
         for (int i = 0; i < _snakeLength; ++i) {
             controls.display.fillRect(
                 _snake[i].x * CELL_SIZE,
@@ -249,6 +267,7 @@ void SnakeLib::drawGame() {
             );
         }
 
+        // Vykreslení ovoce
         controls.display.fillRect(
             _fruit.x * CELL_SIZE,
             _fruit.y * CELL_SIZE,
@@ -294,6 +313,7 @@ void SnakeLib::drawGameOver() {
 void SnakeLib::handleButtonPress() {
     switch (_gameState) {
         case MENU:
+            // Pohyb v menu modulu
             if (controls.leftPressed) {
                 _menuIndex = (_menuIndex - 1 + MENU_ITEM_COUNT) % MENU_ITEM_COUNT;
                 controls.leftPressed = false;
@@ -306,6 +326,7 @@ void SnakeLib::handleButtonPress() {
             break;
 
         case SETTINGS:
+            // Změna obtížnosti hry
             if (controls.leftPressed) {
                 _difficultyIndex = (_difficultyIndex + 1) % DIFFICULTY_COUNT;
                 updateDifficultyLED();
@@ -320,6 +341,7 @@ void SnakeLib::handleButtonPress() {
             break;
 
         case GAME:
+            // Změna směru pohybu hada
             if (controls.leftPressed) {
                 const int oldX = _dirX;
                 _dirX = _dirY;
@@ -343,6 +365,7 @@ void SnakeLib::handleButtonPress() {
 }
 
 void SnakeLib::resetGame() {
+    // Nastavení výchozího stavu hry
     updateDifficultyLED();
     invalidatePendingResult();
 
@@ -367,6 +390,7 @@ void SnakeLib::resetGame() {
 }
 
 void SnakeLib::gameOver() {
+    // Uložení výsledku před přechodem na obrazovku konce hry
     pendingResult.fruits = _fruitsEaten;
     pendingResult.score = calculateWeightedScore(_fruitsEaten, _difficultyIndex);
     pendingResult.difficultyIndex = static_cast<uint8_t>(_difficultyIndex);
@@ -386,6 +410,7 @@ void SnakeLib::spawnFruit() {
     const int fruitMinY = GRID_MIN_Y + FRUIT_MARGIN_LOCAL;
     const int fruitMaxY = GRID_MAX_Y - FRUIT_MARGIN_LOCAL;
 
+    // Náhodné hledání volné pozice pro ovoce
     for (int attempt = 0; attempt < 100; ++attempt) {
         const int x = random(fruitMinX, fruitMaxX + 1);
         const int y = random(fruitMinY, fruitMaxY + 1);
@@ -397,6 +422,7 @@ void SnakeLib::spawnFruit() {
         }
     }
 
+    // Záložní průchod herní plochou
     for (int y = fruitMinY; y <= fruitMaxY; ++y) {
         for (int x = fruitMinX; x <= fruitMaxX; ++x) {
             if (!isCellOccupied(x, y)) {
@@ -420,6 +446,7 @@ bool SnakeLib::isCellOccupied(int x, int y) const {
 void SnakeLib::handleTouchConfirm() {
     switch (_gameState) {
         case MENU:
+            // Výběr položky menu
             if (_menuIndex == 0) {
                 resetGame();
             } else if (_menuIndex == 1) {
@@ -431,6 +458,7 @@ void SnakeLib::handleTouchConfirm() {
             break;
 
         case SETTINGS:
+            // Návrat z nastavení do menu
             _gameSpeed = DIFFICULTY_SPEEDS[_difficultyIndex];
             _gameState = MENU;
             break;
@@ -439,6 +467,7 @@ void SnakeLib::handleTouchConfirm() {
             break;
 
         case GAME_OVER:
+            // Návrat z obrazovky konce hry do menu
             invalidatePendingResult();
             _gameState = MENU;
             _menuIndex = 0;
@@ -456,6 +485,7 @@ bool SnakeLib::isRunning() {
 }
 
 void SnakeLib::updateDifficultyLED() {
+    // Nastavení barvy LED podle obtížnosti
     controls.mutexLed([&]() {
         switch (_difficultyIndex) {
             case 0:
@@ -478,6 +508,7 @@ void SnakeLib::updateDifficultyLED() {
 void SnakeLib::updateBuzzer() {
     const unsigned long now = millis();
 
+    // Ukončení zvuku po konci hry
     if (_gameOverBeepUntil != 0) {
         if (now >= _gameOverBeepUntil) {
             digitalWrite(controls.BUZZER_PIN, LOW);
@@ -486,6 +517,7 @@ void SnakeLib::updateBuzzer() {
         return;
     }
 
+    // Ukončení krátkého zvuku při sebrání ovoce
     if (_buzzerEndTime != 0 && now >= _buzzerEndTime) {
         digitalWrite(controls.BUZZER_PIN, LOW);
         _buzzerEndTime = 0;
@@ -494,6 +526,8 @@ void SnakeLib::updateBuzzer() {
 
 int SnakeLib::calculateWeightedScore(int fruits, int difficultyIndex) const {
     int multiplier = 1;
+
+    // Výpočet skóre podle obtížnosti
     switch (difficultyIndex) {
         case 0: multiplier = 1; break;
         case 1: multiplier = 2; break;
@@ -501,6 +535,7 @@ int SnakeLib::calculateWeightedScore(int fruits, int difficultyIndex) const {
         case 3: multiplier = 5; break;
         default: break;
     }
+
     return fruits * multiplier;
 }
 
@@ -509,6 +544,7 @@ int SnakeLib::currentChaosSpeed() const {
     const int chaosB = 7;
     const int chaosC = 12;
 
+    // Postupné zrychlování režimu Chaos
     if (_fruitsEaten < chaosA) return random(200, 251);
     if (_fruitsEaten < chaosB) return random(130, 181);
     if (_fruitsEaten < chaosC) return random(90, 111);
@@ -547,6 +583,7 @@ void SnakeLib::loadLeaderboard() {
         return;
     }
 
+    // Načtení uložených výsledků ze souboru
     JsonArray arr = doc.as<JsonArray>();
     for (JsonObject obj : arr) {
         if (leaderboardCount >= MAX_LEADERBOARD) break;
@@ -580,6 +617,7 @@ void SnakeLib::saveLeaderboard() {
     JsonDocument doc;
     JsonArray arr = doc.to<JsonArray>();
 
+    // Uložení tabulky výsledků do JSON
     for (uint8_t i = 0; i < leaderboardCount; ++i) {
         JsonObject obj = arr.add<JsonObject>();
         obj["name"] = leaderboard[i].name;
@@ -599,13 +637,17 @@ void SnakeLib::saveLeaderboard() {
 
 void SnakeLib::clearLeaderboardInternal() {
     if (!lockData()) return;
+
+    // Vymazání tabulky výsledků
     leaderboardCount = 0;
     memset(leaderboard, 0, sizeof(leaderboard));
+
     unlockData();
     saveLeaderboard();
 }
 
 void SnakeLib::sortLeaderboard() {
+    // Seřazení výsledků podle skóre a počtu ovoce
     std::sort(leaderboard, leaderboard + leaderboardCount,
         [](const LeaderboardEntry& a, const LeaderboardEntry& b) {
             if (a.score != b.score) return a.score > b.score;
@@ -631,6 +673,7 @@ bool SnakeLib::insertLeaderboardEntry(const char* name) {
 
     bool inserted = false;
 
+    // Vložení výsledku do tabulky
     if (leaderboardCount < MAX_LEADERBOARD) {
         leaderboard[leaderboardCount++] = entry;
         inserted = true;
@@ -658,6 +701,7 @@ bool SnakeLib::insertLeaderboardEntry(const char* name) {
 }
 
 void SnakeLib::registerWebRoutes() {
+    // Nastavení obtížnosti z webového rozhraní
     settings.server().on("/snake/setDifficulty", HTTP_GET, [this](AsyncWebServerRequest *request) {
         if (request->hasParam("level")) {
             setDifficulty(request->getParam("level")->value().toInt());
@@ -665,12 +709,14 @@ void SnakeLib::registerWebRoutes() {
         request->send(200, "text/plain", "Difficulty set");
     });
 
+    // Uložení výsledku z webového rozhraní
     settings.server().on("/snake/setName", HTTP_GET, [this](AsyncWebServerRequest *request) {
         String name = request->hasParam("name") ? request->getParam("name")->value() : "";
         bool accepted = insertLeaderboardEntry(name.c_str());
         request->send(accepted ? 200 : 409, "text/plain", accepted ? "OK" : "Result unavailable");
     });
 
+    // Vrácení tabulky výsledků pro webové rozhraní
     settings.server().on("/snake/leaderboard", HTTP_GET, [this](AsyncWebServerRequest *request) {
         if (!lockData()) {
             request->send(500, "application/json", "[]");
@@ -695,6 +741,7 @@ void SnakeLib::registerWebRoutes() {
         request->send(200, "application/json", json);
     });
 
+    // Ukončení modulu z webového rozhraní
     settings.server().on("/snake/exit", HTTP_GET, [this](AsyncWebServerRequest *request) {
         if (lockData()) {
             invalidatePendingResult();
@@ -704,6 +751,7 @@ void SnakeLib::registerWebRoutes() {
         request->send(200, "text/plain", "ok");
     });
 
+    // Vymazání tabulky výsledků z webového rozhraní
     settings.server().on("/snake/clearLeaderboard", HTTP_GET, [this](AsyncWebServerRequest *request) {
         clearLeaderboardInternal();
         request->send(200, "text/plain", "OK");
@@ -713,6 +761,7 @@ void SnakeLib::registerWebRoutes() {
 void SnakeLib::setDifficulty(int level) {
     if (level < 0 || level >= DIFFICULTY_COUNT) return;
 
+    // Nastavení obtížnosti z webového rozhraní
     if (lockData()) {
         _difficultyIndex = level;
         _gameSpeed = DIFFICULTY_SPEEDS[_difficultyIndex];

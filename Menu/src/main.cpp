@@ -13,6 +13,7 @@
 
 namespace {
 
+// Objekty modulů aplikace
 Controls controls;
 Settings settings(controls);
 SnakeLib snake(controls, settings);
@@ -30,6 +31,7 @@ enum AppState {
     SETTINGS_APP
 };
 
+// Položky hlavního menu
 constexpr int MENU_LENGTH = 5;
 const char* MENU_ITEMS[MENU_LENGTH] = {
     "PPG",
@@ -39,28 +41,34 @@ const char* MENU_ITEMS[MENU_LENGTH] = {
     "Nastaveni"
 };
 
+// Nastavení zobrazení hlavního menu
 constexpr int VISIBLE_ITEMS = 4;
 constexpr int ITEM_HEIGHT = 12;
 constexpr int TOP_OFFSET = 20;
 constexpr unsigned long INPUT_COOLDOWN_MS = 300;
 
+// Požadavek na změnu stavu aplikace
 volatile AppState pendingState = MENU;
 volatile bool stateChangeRequested = false;
 portMUX_TYPE stateMux = portMUX_INITIALIZER_UNLOCKED;
 
+// Statická paměť pro hlavní FreeRTOS task
 StaticTask_t mainTaskBuffer;
 StackType_t mainTaskStack[4096];
 
+// Stav aplikace
 AppState currentState = CALIBRATION;
 AppState transitionTarget = MENU;
 bool transitionInProgress = false;
 bool calibrationDone = false;
 
+// Stav hlavního menu
 int selectedItem = 0;
 int firstVisibleItem = 0;
 unsigned long lastSelectionTime = 0;
 
 void requestStateChange(AppState newState) {
+    // Uložení požadavku na změnu stavu
     portENTER_CRITICAL(&stateMux);
     pendingState = newState;
     stateChangeRequested = true;
@@ -70,6 +78,7 @@ void requestStateChange(AppState newState) {
 bool consumeStateRequest(AppState& outState) {
     bool hasRequest = false;
 
+    // Zpracování požadavku na změnu stavu
     portENTER_CRITICAL(&stateMux);
     if (stateChangeRequested) {
         outState = pendingState;
@@ -82,6 +91,7 @@ bool consumeStateRequest(AppState& outState) {
 }
 
 void requestStopAllModules() {
+    // Požadavek na ukončení všech modulů
     ppg.requestStop();
     level.requestStop();
     snake.requestStop();
@@ -90,6 +100,7 @@ void requestStopAllModules() {
 }
 
 bool anyModuleRunning() {
+    // Kontrola běhu modulů
     return ppg.isRunning() ||
            level.isRunning() ||
            snake.isRunning() ||
@@ -123,6 +134,7 @@ void drawMenu() {
 }
 
 void updateMenuSelection(int direction) {
+    // Posun výběru v hlavním menu
     selectedItem = (selectedItem + direction + MENU_LENGTH) % MENU_LENGTH;
 
     if (selectedItem < firstVisibleItem) {
@@ -143,6 +155,7 @@ void updateMenuSelection(int direction) {
 }
 
 AppState menuSelectionToState() {
+    // Převod položky menu na stav aplikace
     switch (selectedItem) {
         case 0: return APP_PPG;
         case 1: return LEVEL_APP;
@@ -156,6 +169,7 @@ AppState menuSelectionToState() {
 void handleMenuInput() {
     const unsigned long now = millis();
 
+    // Zpracování tlačítek v hlavním menu
     if (controls.leftPressed) {
         updateMenuSelection(-1);
         controls.leftPressed = false;
@@ -166,6 +180,7 @@ void handleMenuInput() {
         controls.rightPressed = false;
     }
 
+    // Potvrzení výběru dotykovým senzorem
     if (controls.FingerTouchedFlag() &&
         (now - lastSelectionTime >= INPUT_COOLDOWN_MS)) {
         requestStateChange(menuSelectionToState());
@@ -174,6 +189,7 @@ void handleMenuInput() {
 }
 
 void startModuleForState(AppState state) {
+    // Spuštění modulu podle aktuálního stavu aplikace
     switch (state) {
         case APP_PPG:
             if (!ppg.isRunning()) {
@@ -218,11 +234,13 @@ void startModuleForState(AppState state) {
 }
 
 void runStartupCalibration() {
+    // Kalibrace měřicích modulů po startu zařízení
     ppg.calibrateSensor();
     level.calibrate();
 }
 
 void updateModuleLifecycle() {
+    // Provedení úvodní kalibrace
     if (currentState == CALIBRATION) {
         if (!calibrationDone) {
             runStartupCalibration();
@@ -234,6 +252,7 @@ void updateModuleLifecycle() {
         return;
     }
 
+    // Kontrola běhu a ukončení aktivního modulu
     switch (currentState) {
         case APP_PPG:
             if (ppg.shouldExit()) {
@@ -299,6 +318,8 @@ void updateModuleLifecycle() {
 
 void processStateRequests() {
     AppState requested;
+
+    // Zpracování požadavku na změnu stavu
     if (!consumeStateRequest(requested)) {
         return;
     }
@@ -307,12 +328,14 @@ void processStateRequests() {
         return;
     }
 
+    // Přímé spuštění modulu z hlavního menu
     if (currentState == MENU && !anyModuleRunning()) {
         currentState = requested;
         startModuleForState(currentState);
         return;
     }
 
+    // Při přechodu mezi moduly se nejprve ukončí běžící modul
     requestStopAllModules();
     transitionTarget = requested;
     transitionInProgress = true;
@@ -323,6 +346,7 @@ void processTransition() {
         return;
     }
 
+    // Čekání na ukončení aktivních modulů
     if (anyModuleRunning()) {
         return;
     }
@@ -334,6 +358,7 @@ void processTransition() {
 }
 
 void registerWebRoutes() {
+    // Registrace webových endpointů jednotlivých modulů
     rgbMenu.registerWebRoutes();
     snake.registerWebRoutes();
     level.registerWebRoutes();
@@ -363,16 +388,19 @@ void registerWebRoutes() {
         request->redirect("/ppg.html");
     });
 
+    // Poskytování statických souborů z LittleFS
     settings.server().serveStatic("/", LittleFS, "/")
         .setDefaultFile("main.html")
         .setCacheControl("no-store, no-cache, must-revalidate, max-age=0");
 }
 
 void initStorage() {
+    // Inicializace souborového systému
     LittleFS.begin();
 }
 
 void initHardware() {
+    // Inicializace hardwarové vrstvy
     controls.begin();
     controls.display.setRotation(0);
     controls.display.clearDisplay();
@@ -386,6 +414,7 @@ void mainTask(void* pvParameters) {
         processStateRequests();
         processTransition();
 
+        // Obsluha hlavního menu
         if (currentState == MENU && !transitionInProgress) {
             handleMenuInput();
             settings.updateRainbow();
@@ -394,8 +423,8 @@ void mainTask(void* pvParameters) {
 
         updateModuleLifecycle();
         vTaskDelay(pdMS_TO_TICKS(50));
-        }
     }
+}
 
 }  // namespace
 
@@ -409,9 +438,10 @@ void setup() {
     settings.init();
     registerWebRoutes();
 
-    // Default po startu: WiFi AP + async web
+    // Spuštění WiFi přístupového bodu a webového rozhraní
     settings.switchConnectivity(Settings::ConnectivityMode::WIFI);
 
+    // Vytvoření hlavního tasku aplikace
     xTaskCreateStaticPinnedToCore(
         mainTask,
         "MainTask",

@@ -13,6 +13,7 @@
 
 <div class="container">
     <div class="card">
+        <!-- Hlavní navigace mezi moduly webového rozhraní -->
         <nav class="menu-grid">
             <a href="#" id="ppgLink" class="menu-button">PPG</a>
             <a href="#" id="levelLink" class="menu-button">Gyroskop</a>
@@ -25,21 +26,25 @@
 <footer>Demonstrační firmware pro ESP32</footer>
 
 <script>
+// Přesměrování na modul RGB
 document.getElementById("rgbLink").addEventListener("click", function(e){
     e.preventDefault();
     window.location.href = '/rgb';
 });
 
+// Přesměrování na modul Had
 document.getElementById("snakeLink").addEventListener("click", function(e){
     e.preventDefault();
     window.location.href = '/snake';
 });
 
+// Přesměrování na modul MPU6050
 document.getElementById("levelLink").addEventListener("click", function(e){
     e.preventDefault();
     window.location.href = '/level';
 });
 
+// Přesměrování na modul PPG
 document.getElementById("ppgLink").addEventListener("click", function(e){
     e.preventDefault();
     window.location.href = '/ppg';

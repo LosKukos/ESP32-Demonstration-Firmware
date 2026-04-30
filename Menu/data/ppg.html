@@ -11,6 +11,7 @@
 <header>Tepová frekvence (z PPG)</header>
 
 <div class="container">
+    <!-- Karty s aktuálními hodnotami měření -->
     <div class="card metrics">
         <div class="metric">
             <p>Tepová frekvence</p>
@@ -30,6 +31,7 @@
         </div>
     </div>
 
+    <!-- Graf průběhu tepové frekvence -->
     <div class="card">
         <div class="chart-wrapper">
             <div class="chart-container">
@@ -37,6 +39,7 @@
             </div>
         </div>
 
+        <!-- Legenda grafu podle použité LED -->
         <div class="chart-legend">
             <div class="legend-item legend-ir">
                 <span class="legend-line"></span>
@@ -52,6 +55,7 @@
             Klepnutí do grafu zobrazí hodnotu
         </div>
 
+        <!-- Ovládací prvky modulu -->
         <div class="chart-actions">
             <button onclick="toggleLed()">Přepnout IR / RED</button>
             <button onclick="toggleAutozoom()">Autozoom</button>
@@ -81,14 +85,17 @@ let selectedIndex = -1;
 let currentMode = "IR";
 
 function getModeColor(mode) {
+    // Výběr barvy grafu podle režimu LED
     return mode === "RED" ? "#ff6363" : "#4da3ff";
 }
 
 function normalizeMode(mode) {
+    // Ošetření neplatné hodnoty režimu
     return mode === "RED" ? "RED" : "IR";
 }
 
 function applyModeUi(mode) {
+    // Aktualizace zobrazení aktuálního režimu LED
     currentMode = normalizeMode(mode);
 
     modeBadgeEl.textContent = currentMode;
@@ -97,6 +104,7 @@ function applyModeUi(mode) {
 }
 
 async function apiGet(url) {
+    // Pomocná funkce pro odeslání GET požadavku
     const res = await fetch(url, { cache: "no-store" });
     if (!res.ok) {
         throw new Error(`HTTP ${res.status}`);
@@ -105,6 +113,7 @@ async function apiGet(url) {
 }
 
 async function toggleLed() {
+    // Přepnutí mezi IR a RED režimem
     try {
         await apiGet("/ppg/toggle-led");
     } catch (e) {
@@ -113,6 +122,7 @@ async function toggleLed() {
 }
 
 async function toggleAutozoom() {
+    // Přepnutí automatického měřítka signálu
     try {
         await apiGet("/ppg/autozoom");
     } catch (e) {
@@ -121,6 +131,7 @@ async function toggleAutozoom() {
 }
 
 async function runCalibration() {
+    // Spuštění kalibrace fotosenzoru
     try {
         await apiGet("/ppg/calibrate");
     } catch (e) {
@@ -129,6 +140,7 @@ async function runCalibration() {
 }
 
 async function exitPpg() {
+    // Ukončení modulu a návrat do hlavního menu
     try {
         await apiGet("/ppg/exit");
     } catch (e) {
@@ -142,6 +154,7 @@ function goBack() {
 }
 
 function resizeCanvas() {
+    // Přizpůsobení velikosti grafu velikosti obrazovky
     const rect = canvas.getBoundingClientRect();
     const ratio = window.devicePixelRatio || 1;
 
@@ -154,11 +167,13 @@ function resizeCanvas() {
 window.addEventListener("resize", resizeCanvas);
 
 async function fetchData() {
+    // Načtení aktuálních dat z firmware
     const res = await apiGet("/ppg/update");
     return await res.json();
 }
 
 function pushPoint(array, value) {
+    // Přidání hodnoty do kruhového okna grafu
     array.push(value);
     if (array.length > MAX_POINTS) {
         array.shift();
@@ -166,6 +181,7 @@ function pushPoint(array, value) {
 }
 
 function updateStatus(text, cls) {
+    // Aktualizace stavu měření
     statusEl.innerText = text;
     statusEl.classList.remove("status-ok", "status-offline", "status-nosignal");
     if (cls) {
@@ -174,6 +190,7 @@ function updateStatus(text, cls) {
 }
 
 function updateUi(data) {
+    // Aktualizace zobrazených hodnot podle odpovědi zařízení
     const bpm = Number(data?.bpm);
     const mode = normalizeMode(typeof data?.mode === "string" ? data.mode.toUpperCase() : "IR");
 
@@ -203,11 +220,13 @@ function updateUi(data) {
 }
 
 function setDisconnectedUi() {
+    // Zobrazení stavu při nedostupném zařízení
     bpmEl.innerText = "--";
     updateStatus("OFFLINE", "status-offline");
 }
 
 function getRange(values, fallbackMin, fallbackMax) {
+    // Určení rozsahu osy podle dostupných hodnot
     const filtered = values.filter(v => Number.isFinite(v));
 
     if (!filtered.length) {
@@ -231,10 +250,12 @@ function getRange(values, fallbackMin, fallbackMax) {
 }
 
 function mapValue(value, min, max, top, bottom) {
+    // Přepočet BPM hodnoty na svislou pozici v grafu
     return bottom - ((value - min) / (max - min)) * (bottom - top);
 }
 
 function drawAxisLabel(text, x, y, align = "left") {
+    // Vykreslení popisku osy grafu
     const ratio = window.devicePixelRatio || 1;
 
     ctx.save();
@@ -246,6 +267,7 @@ function drawAxisLabel(text, x, y, align = "left") {
 }
 
 function drawColoredSeries(data, modes, range, chartArea) {
+    // Vykreslení průběhu BPM podle režimu LED
     const ratio = window.devicePixelRatio || 1;
 
     for (let i = 1; i < data.length; i++) {
@@ -275,6 +297,7 @@ function drawColoredSeries(data, modes, range, chartArea) {
 }
 
 function drawSelectedMarker(chartArea, bpmRange) {
+    // Vykreslení značky zvoleného bodu v grafu
     if (selectedIndex < 0 || selectedIndex >= labels.length) return;
 
     const ratio = window.devicePixelRatio || 1;
@@ -304,6 +327,7 @@ function drawSelectedMarker(chartArea, bpmRange) {
 }
 
 function drawChart() {
+    // Překreslení celého grafu
     const ratio = window.devicePixelRatio || 1;
     const width = canvas.width;
     const height = canvas.height;
@@ -322,6 +346,7 @@ function drawChart() {
 
     const bpmRange = getRange(bpmData, 40, 140);
 
+    // Vykreslení mřížky grafu
     ctx.save();
     ctx.strokeStyle = "#3a3a3a";
     ctx.lineWidth = 1 * ratio;
@@ -363,6 +388,7 @@ function drawChart() {
 }
 
 function updateTooltip() {
+    // Aktualizace textu s hodnotou vybraného bodu
     if (selectedIndex < 0 || selectedIndex >= labels.length) {
         tooltipEl.textContent = "Klikni do grafu pro zobrazení hodnoty.";
         return;
@@ -376,54 +402,46 @@ function updateTooltip() {
 }
 
 function handleCanvasPointer(clientX) {
+    // Výběr bodu v grafu podle pozice kurzoru nebo dotyku
     const rect = canvas.getBoundingClientRect();
     const x = clientX - rect.left;
     const ratio = window.devicePixelRatio || 1;
-    const widthPx = canvas.width;
-    const cssWidth = rect.width;
 
-    const xPx = (x / cssWidth) * widthPx;
+    const chartLeft = 52 * ratio;
+    const chartRight = canvas.width - 20 * ratio;
+    const normalized = (x * ratio - chartLeft) / Math.max(1, chartRight - chartLeft);
 
-    const left = 52 * ratio;
-    const right = widthPx - 20 * ratio;
-    const usableWidth = right - left;
+    selectedIndex = Math.round(normalized * (MAX_POINTS - 1));
+    selectedIndex = Math.max(0, Math.min(labels.length - 1, selectedIndex));
 
-    if (xPx < left || xPx > right || labels.length === 0) {
-        return;
-    }
-
-    const relative = (xPx - left) / usableWidth;
-    const index = Math.round(relative * Math.max(1, MAX_POINTS - 1));
-    const clamped = Math.max(0, Math.min(labels.length - 1, index));
-
-    selectedIndex = clamped;
     updateTooltip();
     drawChart();
 }
 
-canvas.addEventListener("click", (e) => {
-    handleCanvasPointer(e.clientX);
+canvas.addEventListener("click", (event) => {
+    handleCanvasPointer(event.clientX);
 });
 
-canvas.addEventListener("touchstart", (e) => {
-    if (e.touches && e.touches.length > 0) {
-        handleCanvasPointer(e.touches[0].clientX);
+canvas.addEventListener("touchstart", (event) => {
+    if (event.touches.length > 0) {
+        handleCanvasPointer(event.touches[0].clientX);
     }
 }, { passive: true });
 
-async function update() {
+async function refreshLoop() {
+    // Periodické načítání dat z firmware
     try {
         const data = await fetchData();
         updateUi(data);
-    } catch (error) {
+    } catch (e) {
+        console.error("PPG update failed:", e);
         setDisconnectedUi();
     }
 }
 
-applyModeUi("IR");
 resizeCanvas();
-update();
-setInterval(update, 1000);
+setInterval(refreshLoop, 1000);
+refreshLoop();
 </script>
 
 </body>

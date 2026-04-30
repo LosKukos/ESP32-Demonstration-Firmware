@@ -1,3 +1,4 @@
+/* Základní nastavení stránky */
 body {
     font-family: Arial, sans-serif;
     background-color: #1a1a1a;
@@ -6,7 +7,7 @@ body {
     padding: 0;
 }
 
-/* Header */
+/* Hlavička stránky */
 header {
     background-color: #333;
     padding: 16px;
@@ -16,7 +17,7 @@ header {
     border-bottom: 2px solid #ff6600;
 }
 
-/* Layout */
+/* Rozvržení hlavního obsahu */
 .container {
     padding: 15px;
     display: flex;
@@ -24,7 +25,7 @@ header {
     gap: 20px;
 }
 
-/* Cards */
+/* Karty rozhraní */
 .card {
     background-color: #2a2a2a;
     border-radius: 12px;
@@ -32,14 +33,14 @@ header {
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.4);
 }
 
-/* Section headings */
+/* Nadpisy sekcí */
 .card h3 {
     margin: 0 0 12px 0;
     color: #ff6600;
     font-size: 1.1em;
 }
 
-/* Table */
+/* Tabulka výsledků */
 .table-wrapper {
     width: 100%;
     overflow-x: auto;
@@ -68,7 +69,7 @@ td {
     color: #ddd;
 }
 
-/* Form */
+/* Formulář pro uložení výsledku */
 .form-row {
     display: grid;
     grid-template-columns: 1fr auto;
@@ -91,7 +92,7 @@ input::placeholder {
     color: #888;
 }
 
-/* Button groups */
+/* Skupiny tlačítek */
 .button-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(120px, 1fr));
@@ -104,7 +105,7 @@ input::placeholder {
     gap: 10px;
 }
 
-/* Buttons */
+/* Tlačítka */
 button {
     background-color: #ff6600;
     border: none;
@@ -121,14 +122,14 @@ button:hover {
     background-color: #e65c00;
 }
 
-/* Divider replacement */
+/* Oddělovací prvek */
 .card-divider {
     height: 1px;
     background: #3a3a3a;
     margin: 4px 0 0 0;
 }
 
-/* Footer */
+/* Patička stránky */
 footer {
     text-align: center;
     padding: 10px;

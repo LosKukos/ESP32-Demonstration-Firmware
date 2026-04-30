@@ -1,5 +1,4 @@
-#ifndef SETTINGS_H
-#define SETTINGS_H
+#pragma once
 
 #include <Arduino.h>
 #include <controls.h>
@@ -16,31 +15,41 @@ public:
         WIFI
     };
 
+    // Výchozí názvy Bluetooth zařízení a WiFi sítě
+    static constexpr const char* BT_default   = "DemoFW";
+    static constexpr const char* WIFI_default = "ESP32-Demo";
+
     Settings(Controls& controlsRef);
 
+    // Inicializace modulu
     void init();
     void begin();
+
+    // Stav modulu
     bool shouldExit();
+    bool isRunning();
+    void requestStop() { _exit = true; }
+
+    // Vykreslení obrazovek
     void drawAbout();
     void drawDebug();
     void updateRainbow();
-    bool isRunning();
 
-    // Web / WiFi API
+    // WiFi a webové rozhraní
     void wifiStartup();
     void webStart();
     AsyncWebServer& server();
 
-    // Connectivity manager
+    // Ovládání Bluetooth
     void startBluetooth();
     void stopBluetooth();
 
+    // Ovládání WiFi a webserveru
     void startWifiWeb();
     void stopWifiWeb();
 
+    // Přepnutí aktivního komunikačního režimu
     void switchConnectivity(ConnectivityMode newMode);
-
-    void requestStop() { _exit = true; }
 
     String getStoredWiFiSSID() const { return wifi_ssid_runtime; }
     String getStoredBTName() const { return bt_name_runtime; }
@@ -49,22 +58,18 @@ private:
     Controls& controls;
     AsyncWebServer _server;
 
-    static constexpr const char* BT_default   = "DemoFW";
-    static constexpr const char* WIFI_default = "ESP32-Demo";
-
-    // Connectivity state
+    // Stav komunikace
     ConnectivityMode currentConnectivityMode = ConnectivityMode::WIFI;
     bool webServerStarted = false;
 
-    // Task 
+    // FreeRTOS task modulu
     static void task(void *pvParameters);
     TaskHandle_t taskHandle = nullptr;
 
-    // Exit
+    // Stav běhu modulu
     volatile bool _exit = false;
     bool running = false;
 
-    // State machine 
     enum State {
         MENU,
         BT_READ,
@@ -79,6 +84,7 @@ private:
     int selected = 0;
     int firstVisibleItem = 0;
 
+    // Nastavení menu
     static constexpr int visibleItems = 4;
     static constexpr int menuTopOffset = 20;
     static constexpr int menuItemHeight = 12;
@@ -86,27 +92,25 @@ private:
     static const int menuLength = 5;
     const String menuItems[menuLength] = { "Info", "Bluetooth", "WiFi", "Debug", "Konec" };
 
-    // Runtime values
+    // Aktuální názvy komunikace
     String bt_name_runtime;
     String wifi_ssid_runtime;
 
-    // Timing 
+    // Časování animace LED
     unsigned long lastRainbowTime = 0;
     int rainbowPos = 0;
 
-    // Helpers 
+    // Pomocné funkce vykreslení
     void drawMenu();
     void drawBTRead();
     void drawBTConfirm();
     void drawWiFiSSIDRead();
     void drawWiFiConfirm();
 
+    // Pomocné funkce modulu
     void updateMenuSelection(int direction);
-
     String readSerialLine();
     uint32_t wheelColor(byte wheelPos);
 };
 
 extern BluetoothSerial SerialBT;
-
-#endif

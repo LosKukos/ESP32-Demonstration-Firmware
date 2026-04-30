@@ -1,6 +1,3 @@
-#ifndef LEVEL_H
-#define LEVEL_H
-
 #pragma once
 
 #include <Arduino.h>
@@ -106,5 +103,3 @@ private:
     bool lockData(TickType_t ticks = portMAX_DELAY);
     void unlockData();
 };
-
-#endif

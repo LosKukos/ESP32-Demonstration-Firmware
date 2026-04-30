@@ -12,6 +12,7 @@
 
 <div class="container">
 
+    <!-- Tabulka nejlepších výsledků uložených v zařízení -->
     <div class="card">
         <h3>Nejlepší výsledky</h3>
         <div class="table-wrapper">
@@ -29,6 +30,7 @@
         </div>
     </div>
 
+    <!-- Formulář pro uložení výsledku po skončení hry -->
     <div class="card">
         <h3>Uložit výsledek</h3>
         <div class="form-row">
@@ -37,6 +39,7 @@
         </div>
     </div>
 
+    <!-- Volba obtížnosti hry -->
     <div class="card">
         <h3>Obtížnost</h3>
         <div class="button-grid">
@@ -47,6 +50,7 @@
         </div>
     </div>
 
+    <!-- Ovládací prvky webového rozhraní -->
     <div class="card">
         <h3>Akce</h3>
         <div class="actions-grid">
@@ -61,10 +65,12 @@
 
 <script>
 function setDifficulty(level) {
+    // Nastavení obtížnosti hry ve firmware
     fetch('/snake/setDifficulty?level=' + level);
 }
 
 function saveName() {
+    // Odeslání jména hráče pro uložení výsledku
     const name = document.getElementById("playerName").value.trim();
 
     if (name.length > 0) {
@@ -77,6 +83,7 @@ function saveName() {
 }
 
 function clearLeaderboard() {
+    // Vymazání uložené tabulky výsledků
     if (confirm("Opravdu smazat všechny záznamy?")) {
         fetch('/snake/clearLeaderboard')
             .then(() => {
@@ -86,6 +93,7 @@ function clearLeaderboard() {
 }
 
 function goBack() {
+    // Ukončení modulu a návrat do hlavního menu
     fetch('/snake/exit')
         .then(() => {
             window.location.href = '/';
@@ -93,6 +101,7 @@ function goBack() {
 }
 
 function updateLeaderboard() {
+    // Načtení a zobrazení aktuální tabulky výsledků
     fetch('/snake/leaderboard')
         .then(resp => {
             if (!resp.ok) throw new Error("Network error");
@@ -119,6 +128,7 @@ function updateLeaderboard() {
         });
 }
 
+// Pravidelná aktualizace tabulky výsledků
 setInterval(updateLeaderboard, 2000);
 updateLeaderboard();
 </script>
